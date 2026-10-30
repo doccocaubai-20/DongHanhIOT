@@ -1,0 +1,30 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {JSDOM,VirtualConsole}=require('jsdom');
+const root=path.resolve(__dirname,'../web');
+const errors=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
+const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'http://localhost/',runScripts:'outside-only',virtualConsole:vc});
+const w=dom.window,d=w.document;
+w.setInterval=()=>0;w.AbortSignal=AbortSignal;
+w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+w.eval(fs.readFileSync(path.join(root,'app.js'),'utf8'));
+const click=id=>d.getElementById(id).click();const tick=()=>new Promise(r=>setImmediate(r));
+(async()=>{
+await tick();assert.match(d.getElementById('modeBanner').textContent,/MINH HỌA|minh họa/);assert.equal(d.getElementById('deviceCount').textContent,'2 / 2');
+assert.equal(d.getElementById('locationText').textContent,'Đang chờ chia sẻ vị trí');
+click('demoSos');assert.equal(d.getElementById('sosCount').textContent,'1');assert.equal(d.getElementById('sosBanner').hidden,false);
+click('openSos');assert.equal(d.getElementById('eventDialog').open,true);assert.match(d.getElementById('eventContent').textContent,/Camera chưa sẵn sàng/);assert.match(d.getElementById('eventContent').textContent,/Vị trí lúc SOS.*Không có vị trí đủ mới/);
+click('ackSos');await tick();assert.equal(d.getElementById('sosCount').textContent,'0');
+d.querySelector('[data-page="messages"]').click();assert.match(d.getElementById('messageList').textContent,/Gậy có thể bị rơi/);assert.equal(d.getElementById('msgBadge').textContent,'1');click('readAll');await tick();assert.equal(d.getElementById('msgBadge').hidden,true);click('pushBtn');assert.match(d.getElementById('toast').textContent,/Minh họa: kết nối bằng khóa người nhà/);
+click('captureNow');assert.match(d.getElementById('toast').textContent,/Minh họa: khi kết nối, camera sẽ chụp/);
+d.querySelector('[data-page="history"]').click();d.querySelector('[data-filter="manual"]').click();assert.equal(d.querySelectorAll('.history-card').length,0);d.querySelector('[data-filter="drop"]').click();assert.equal(d.querySelectorAll('.history-card').length,1);
+d.getElementById('search').value='khongtontai';d.getElementById('search').dispatchEvent(new w.Event('input'));assert.equal(d.querySelectorAll('.history-card').length,0);
+d.querySelector('[data-page="settings"]').click();d.getElementById('periodicToggle').checked=false;click('saveSettings');await tick();assert.equal(d.getElementById('periodicState').textContent,'Đang tắt');
+click('connectBtn');assert.equal(d.getElementById('connectDialog').open,true);click('useDemo');assert.equal(d.getElementById('connectDialog').open,false);
+// Kết nối dữ liệu thật bằng API giả lập có kiểm soát; không cần camera hoặc dữ liệu người dùng.
+w.fetch=async(url,opt)=>({ok:true,headers:{get:()=> 'application/json'},json:async()=>url.endsWith('/session')?{role:'caregiver',mode:'duo'}:url.endsWith('/messages')?{messages:[{id:'sos-1:sos',event_id:'sos-1',stage:'sos',level:'sos',title:'SOS: người thân cần hỗ trợ',body:'Từ thiết bị ESP32.',created_at:Date.now()/1000,read_at:null,push_state:'no_device'}],unread:1}:{mode:'duo',ai_provider:'segformer',unread_messages:1,devices:[],events:[],settings:{periodic_enabled:true,interval_s:60},location:null}});
+click('connectBtn');d.getElementById('token').value='test-credential-abcdefghijklmnopqrstuvwxyz';d.getElementById('connectForm').dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();await tick();
+assert.match(d.getElementById('modeBanner').textContent,/DỮ LIỆU THẬT.*ESP32 \+ ESP32-CAM/);assert.equal(d.getElementById('msgBadge').textContent,'1');assert.match(d.getElementById('messageList').textContent,/SOS: người thân cần hỗ trợ/);assert.equal(d.getElementById('aiInfo').textContent,'SegFormer-B0 trên máy chủ');assert.equal(d.getElementById('deviceCount').textContent,'0 / 0');assert.match(d.getElementById('recentFeed').textContent,/Chưa có sự kiện/);
+assert.equal(d.getElementById('heroImage').querySelector('.demo-scene'),null);
+click('disconnect');assert.match(d.getElementById('modeBanner').textContent,/MINH HỌA|minh họa/);
+assert.deepEqual(errors,[]);console.log('PASS: 29 DOM assertions (demo, SOS + context, ack, messages, push, capture, filters, privacy, connect duo, disconnect).');dom.window.close();
+})().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});

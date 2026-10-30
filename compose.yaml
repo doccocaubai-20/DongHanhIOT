@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    ports:
+      - "8000:8000"
+    volumes:
+      - donghanh-data:/data
+    restart: unless-stopped
+volumes:
+  donghanh-data:

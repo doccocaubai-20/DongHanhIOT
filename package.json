@@ -1,0 +1,8 @@
+{
+  "name": "dong-hanh-hop-nhat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Optional DOM tests; the web itself requires no Node build step.",
+  "scripts": {"test:ui": "node tests/web_dom.cjs"},
+  "devDependencies": {"jsdom": "26.1.0"}
+}

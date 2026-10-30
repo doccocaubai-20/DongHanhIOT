@@ -1,0 +1,11 @@
+.env
+.venv/
+data/
+*.sqlite3
+*.db
+__pycache__/
+firmware/*/config.h
+ai/model/
+*.log
+node_modules/
+build-checks/

@@ -1,0 +1,9 @@
+.env
+.venv
+node_modules
+data
+firmware
+tests
+docs
+ai/model
+__pycache__

@@ -1,0 +1,10 @@
+# Cài sau requirements.txt. Bản CPU nhẹ hơn nhiều so với bản CUDA:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r ai/requirements-ai.txt
+# Đã kiểm tra: torch 2.14.1+cpu, torchvision 0.29.1+cpu, transformers 5.20.2 (Python 3.12, Windows).
+# transformers 5.x cần torchvision để tiền xử lý ảnh SegFormer.
+torch>=2.6
+torchvision
+transformers>=4.48
+safetensors
+numpy

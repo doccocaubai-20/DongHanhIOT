@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1050" viewBox="0 0 1280 1050">
+<rect width="1280" height="1050" fill="#f5f7f2"/>
+<style>text{font-family:Arial,sans-serif;fill:#183f37}.title{font-size:30px;font-weight:bold}.sub{font-size:17px;fill:#617966}.label{font-size:18px}.small{font-size:15px}.wire{fill:none;stroke:#326f61;stroke-width:3}.power{fill:none;stroke:#be634d;stroke-width:3}.box{fill:white;stroke:#d4dfcf;stroke-width:2}.part{fill:white;stroke:#326f61;stroke-width:2}.node{fill:#326f61}</style>
+<text x="48" y="55" class="title">Đồng Hành / Mạch chia áp và điều khiển tải</text>
+<text x="48" y="88" class="sub">Sơ đồ nguyên lý — xem số GPIO tương ứng trong hướng dẫn từng bo. Tắt nguồn trước khi đấu.</text>
+<rect x="35" y="118" width="1210" height="275" rx="16" class="box"/>
+<text x="62" y="155" class="title" style="font-size:23px">1. HC-SR04: hạ ECHO 5 V xuống khoảng 3,0 V</text>
+<rect x="65" y="190" width="175" height="120" rx="8" fill="#edf4e8"/>
+<text x="83" y="225" class="label">HC-SR04</text><text x="83" y="255" class="small">VCC → 5 V</text><text x="83" y="282" class="small">GND → GND chung</text>
+<path d="M240 225H300M365 225H400M465 225H530M530 225H620M530 225V285H620M685 285H715M780 285H810M875 285H940V325" class="wire"/>
+<rect x="300" y="212" width="65" height="26" class="part"/><rect x="400" y="212" width="65" height="26" class="part"/>
+<rect x="620" y="272" width="65" height="26" class="part"/><rect x="715" y="272" width="65" height="26" class="part"/><rect x="810" y="272" width="65" height="26" class="part"/>
+<text x="312" y="202" class="small">1 kΩ</text><text x="412" y="202" class="small">1 kΩ</text><text x="629" y="260" class="small">1 kΩ</text><text x="724" y="260" class="small">1 kΩ</text><text x="819" y="260" class="small">1 kΩ</text>
+<circle cx="530" cy="225" r="5" class="node"/><text x="255" y="252" class="small">ECHO</text>
+<text x="635" y="230" class="label">GPIO19 (test) / GPIO14 (ngực)</text>
+<path d="M920 325H960M926 333H954M933 341H947" class="wire"/>
+<text x="982" y="330" class="small">GND</text>
+<text x="65" y="359" class="sub">TRIG nối thẳng GPIO18 (test) / GPIO13 (ngực). ECHO tuyệt đối không nối thẳng GPIO.</text>
+<rect x="35" y="415" width="1210" height="420" rx="16" class="box"/>
+<text x="62" y="455" class="title" style="font-size:23px">2. Motor rung: nguồn đúng định mức + MOSFET + diode dập ngược</text>
+<text x="65" y="490" class="sub">GPIO25 (test) / GPIO15 (ngực)</text>
+<path d="M100 590H225M295 590H425M425 590H535M425 590V660M425 715V765H650M650 650V765M650 548V570M650 492V480H890V500" class="wire"/>
+<rect x="225" y="577" width="70" height="26" class="part"/><text x="234" y="565" class="small">220 Ω</text>
+<rect x="412" y="660" width="26" height="55" class="part"/><text x="245" y="683" class="small">10 kΩ (test)</text><text x="245" y="708" class="small">2 kΩ (ngực)</text>
+<path d="M535 568V615M550 560V625M550 570H650M550 615H650M650 615V650" class="wire"/>
+<circle cx="650" cy="520" r="28" fill="#edf4e8" stroke="#326f61" stroke-width="3"/><text x="640" y="526" class="label">M</text>
+<path d="M650 480V472H1050M890 535V570H650M890 525V535" class="power"/>
+<path d="M875 525L890 502 905 525Z" fill="white" stroke="#be634d" stroke-width="2"/><path d="M874 500H906" class="power"/>
+<text x="920" y="525" class="small">Diode: vạch cathode ↑</text><text x="920" y="549" class="small">về cực + của motor</text>
+<text x="910" y="451" class="small">Nguồn motor đúng điện áp</text><text x="1060" y="478" class="label">+3 V*</text>
+<text x="680" y="560" class="small">D</text><text x="680" y="640" class="small">S</text><text x="510" y="555" class="small">G</text>
+<text x="710" y="686" class="small">MOSFET logic-level N</text><text x="710" y="712" class="small">RDS(on) công bố tại VGS 2,5 V</text>
+<circle cx="425" cy="590" r="5" class="node"/><path d="M650 765V782M630 782H670M636 790H664M643 798H657" class="wire"/>
+<text x="710" y="785" class="small">GND nguồn tải nối GND ESP32</text>
+<text x="65" y="812" class="sub">* Ví dụ motor định mức 3 V. Không lấy nguồn motor từ GPIO. Kiểm tra chân G/D/S thực tế; không suy vị trí theo hình này.</text>
+<rect x="35" y="857" width="1210" height="153" rx="16" class="box"/>
+<text x="62" y="897" class="title" style="font-size:23px">3. Nút bấm ESP32-CAM: tháo UART trước khi dùng</text>
+<text x="65" y="932" class="label">GPIO3 / SOS hoặc GPIO1 / PRIVACY → 1 kΩ → nút bấm thường hở → GND</text>
+<text x="65" y="965" class="sub">Khi nạp: tháo hai nhánh nút, nối UART. Khi chạy: tháo TX/RX adapter, nối lại nút, tháo GPIO0–GND.</text>
+<text x="65" y="991" class="sub">Buzzer dùng driver tương tự theo đúng loại tải/định mức. Nguồn và tụ lọc được mô tả chi tiết trong tài liệu.</text>
+</svg>
