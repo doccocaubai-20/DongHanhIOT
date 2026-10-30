@@ -298,3 +298,33 @@ if(speakAiBtn) speakAiBtn.onclick = () => {
 };
 if(phoneSpeakTest) phoneSpeakTest.onclick = () => speakText('Hệ thống Đồng Hành đã sẵn sàng phát âm thanh cảnh báo.', true);
 updateVoiceUI();
+
+const PRESET_CAREGIVER = 'CTR8szp5wUCA4vH3gW-nwl9RCEU7E2TimZis46pts18';
+const PRESET_PHONE = 'k-cgK35Ce1MKrt5B4uUzOGg7vZEsvjVb4-KT4-YFI7Q';
+if (quickCaregiver) quickCaregiver.onclick = () => { token.value = PRESET_CAREGIVER; };
+if (quickPhone) quickPhone.onclick = () => { token.value = PRESET_PHONE; };
+
+const urlParams = new URLSearchParams(window.location.search);
+const queryRole = urlParams.get('role');
+if (!session && queryRole && ['caregiver','phone'].includes(queryRole)) {
+  const chosenToken = queryRole === 'phone' ? PRESET_PHONE : PRESET_CAREGIVER;
+  setTimeout(async () => {
+    try {
+      session = { url: '', token: chosenToken };
+      const info = await api('/api/v1/session');
+      session.role = info.role;
+      session.mode = info.mode;
+      sessionStorage.setItem('donghanh-session', JSON.stringify(session));
+      demo = false;
+      if (info.role === 'phone') {
+        showPage('phone');
+        modeBanner.className = 'mode-banner live';
+        modeBanner.textContent = 'ĐÃ KẾT NỐI · ĐIỆN THOẠI ĐỒNG HÀNH';
+      } else {
+        showPage('overview');
+      }
+      await refresh();
+      refreshPushStatus();
+    } catch(e) {}
+  }, 100);
+}
