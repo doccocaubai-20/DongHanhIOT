@@ -13,8 +13,7 @@
 4. [GIAO THỨC TRUYỀN THÔNG VÀ BẢO MẬT (NETWORKING)](#4-giao-thức-truyền-thông-và-bảo-mật-networking)
 5. [HỆ THỐNG PHẦN MỀM VÀ CLOUD (BACKEND & DASHBOARD)](#5-hệ-thống-phần-mềm-và-cloud-backend--dashboard)
 6. [TÍCH HỢP TRÍ TUỆ NHÂN TẠO (AI INTEGRATION)](#6-tích-hợp-trí-tuệ-nhân-tạo-ai-integration)
-7. [KỊCH BẢN THỰC NGHIỆM VÀ ĐÁNH GIÁ (TEST CASES)](#7-kịch-bản-thực-nghiệm-và-đánh-giá-test-cases)
-8. [KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN](#8-kết-luận-và-hướng-phát-triển)
+7. [KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN](#7-kết-luận-và-hướng-phát-triển)
 
 ---
 
@@ -191,45 +190,15 @@ Hệ thống hỗ trợ 2 cơ chế trí tuệ nhân tạo nhận diện nguy c�
    * Gửi ảnh lên đám mây phân tích ngữ cảnh nâng cao bằng tiếng Việt.
    * Đọc biển báo giao thông, cảnh báo công trường, nhận diện loại phương tiện đang tiến lại gần.
 
-### 6.2. Kết quả đo kiểm hiệu năng AI (Benchmark Thực tế)
+## 7. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
 
-| Chỉ số đo lường | Chạy trên Laptop i7 (8 Luồng CPU) | Chạy trên VPS Cloud (2 Luồng ảo) |
-| :--- | :--- | :--- |
-| **Thời gian phân tích ảnh** | **0.581 giây** (Tức thì) | **11.160 giây** (Do CPU hạn chế & Swap) |
-| **Mức tiêu thụ CPU** | ~25% | 53.5% (Đỉnh điểm 100%) |
-| **Bộ nhớ RAM sử dụng** | ~400 MB | ~397 MB |
-| **Độ an toàn hệ thống** | Hoàn hảo | RAM thực còn trống > 170 MB (Không crash) |
-
-👉 **Khuyến nghị kiến trúc:** Khi triển khai trên VPS cấu hình tiết kiệm (1GB RAM), phương án sử dụng **Gemini Vision API** đem lại tốc độ vượt trội (1.2 giây/ảnh) và tải CPU gần như bằng 0%.
-
----
-
-## 7. KỊCH BẢN THỰC NGHIỆM VÀ ĐÁNH GIÁ (TEST CASES)
-
-| STT | Tên kịch bản | Thao tác thực nghiệm | Kết quả mong đợi | Đánh giá |
-| :---: | :--- | :--- | :--- | :---: |
-| **TC01** | Cảnh báo vật cản xa | Đặt chướng ngại vật ở khoảng cách 80 - 120 cm | Motor ngực rung nhẹ ngắt quãng, chưa kêu còi | **ĐẠT** |
-| **TC02** | Cảnh báo vật cản gần | Đưa vật cản vào cự ly < 40 cm | Motor rung liên tục mức tối đa, còi D13 bíp dồn dập | **ĐẠT** |
-| **TC03** | Báo động SOS khẩn cấp | Nhấn giữ nút SOS (D27) trong 1.5 giây | Còi trên áo và gậy kêu vang liên tục, Dashboard hiện đỏ | **ĐẠT** |
-| **TC04** | Tìm gậy qua ESP-NOW | Bấm nút Find (D33) trên áo khi tắt Wi-Fi | Còi trên gậy ESP32-C3 kêu to tức thì (độ trễ < 5ms) | **ĐẠT** |
-| **TC05** | Tìm gậy qua Web Cloud | Bấm nút "Phát còi tìm gậy" trên Dashboard web | C3 nhận lệnh qua HTTP Polling và hú còi sau 1 giây | **ĐẠT** |
-| **TC06** | Tắt còi tại chỗ trên gậy | Bấm nút BOOT (GPIO 9) trên bo C3 khi đang hú | Còi gậy lập tức ngừng kêu, gửi phản hồi về hệ thống | **ĐẠT** |
-| **TC07** | Khả năng chạy Offline | Tắt toàn bộ Wi-Fi và ngắt mạng 4G | Toàn bộ chức năng đo khoảng cách và ESP-NOW chạy tốt | **ĐẠT** |
-| **TC08** | Chuyển mạng ra ngoài đường | ESP32 chuyển từ Wi-Fi nhà sang 4G Hotspot | Kết nối thành công tới `iot.chongziapp.id.vn` qua HTTPS | **ĐẠT** |
-| **TC09** | Nhận diện AI mặt đường | Gửi ảnh chụp thử lòng đường lên API | SegFormer phát hiện chính xác vùng `road` và cảnh báo | **ĐẠT** |
-| **TC10** | Tải Dashboard PWA di động | Bật 4G trên điện thoại truy cập domain | Giao diện tải nhanh < 1s, đọc âm thanh tiếng Việt tốt | **ĐẠT** |
-
----
-
-## 8. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
-
-### 8.1. Kết quả đạt được
+### 7.1. Kết quả đạt được
 1. Chế tạo thành công mô hình phần cứng hoạt động ổn định gồm khối ngực (ESP32) và khối gậy (ESP32-C3).
 2. Xây dựng cơ chế an toàn kép: **ESP-NOW nội bộ (Offline)** kết hợp **RESTful HTTPS Cloud (Online)**.
 3. Triển khai hoàn chỉnh hệ thống Backend FastAPI và Web Dashboard PWA trên máy chủ đám mây Oracle Cloud với tên miền riêng và chứng chỉ SSL bảo mật.
 4. Tích hợp thử nghiệm thành công mô hình trí tuệ nhân tạo SegFormer và Gemini Vision.
 
-### 8.2. Hướng phát triển trong tương lai
+### 7.2. Hướng phát triển trong tương lai
 * Tích hợp thêm cảm biến định vị **GPS NEO-6M** độc lập trên gậy để không phụ thuộc vào GPS điện thoại.
 * Bổ sung module phát âm thanh phần cứng **DFPlayer Mini + Loa nhỏ** gắn trực tiếp lên cổ áo, giúp phát giọng nói tiếng Việt trực tiếp mà không cần qua tai nghe điện thoại.
 * Tối ưu hóa mô hình AI sang định dạng **TensorRT** hoặc **ONNX** để chạy trực tiếp trên các vi xử lý biên tiết kiệm năng lượng.

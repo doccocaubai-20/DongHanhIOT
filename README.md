@@ -1,6 +1,6 @@
 # Đồng Hành — Hệ thống IoT hỗ trợ người khiếm thị di chuyển an toàn
 
-> 📚 **Tài liệu Báo cáo BTL / Đồ án:** Đã biên soạn đầy đủ cấu trúc học thuật, sơ đồ khối, kiến trúc 5 lớp IoT Level 5, bảng chân nối, so sánh giao thức REST vs MQTT và ma trận kiểm thử tại [**BAO-CAO-BTL.md**](BAO-CAO-BTL.md).
+> 📚 **Tài liệu Báo cáo BTL / Đồ án:** Đã biên soạn đầy đủ cấu trúc học thuật, sơ đồ khối, kiến trúc 5 lớp IoT Level 5, bảng chân nối, và so sánh giao thức REST vs MQTT tại [**BAO-CAO-BTL.md**](BAO-CAO-BTL.md).
 
 Bản này lấy `dong-hanh-iot` làm nền và đưa vào các phần tốt của `IOT/smart_cane`: Gemini, chụp ảnh theo yêu cầu, vị trí lúc SOS, giữ nút SOS, cảnh báo AI tùy chọn cho người đeo, nút tìm gậy ESP32-C3, camera không PSRAM. Chi tiết thay đổi và lý do: [docs/11-hop-nhat.md](docs/11-hop-nhat.md).
 
