@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Mã QR Kết Nối & Bật GPS — Hệ Thống Đồng Hành</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .print-card {
+      background: white;
+      border: 3px solid #21695b;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #21695b;
+      font-size: 24px;
+      margin: 0 0 8px;
+    }
+    .sub {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .qr-container {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px dashed #cbd5e1;
+      display: inline-block;
+      margin: 10px 0 20px;
+    }
+    .qr-container img {
+      width: 280px;
+      height: 280px;
+      display: block;
+    }
+    .steps {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.6;
+      border-left: 4px solid #21695b;
+    }
+    .steps ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .url {
+      font-family: monospace;
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 16px;
+      word-break: break-all;
+    }
+    .btn-row {
+      margin-top: 24px;
+    }
+    button {
+      background: #21695b;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #185246;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .print-card { box-shadow: none; border-color: #000; }
+      .btn-row { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-card">
+    <h1>HỆ THỐNG ĐỒNG HÀNH</h1>
+    <div class="sub">THIẾT BỊ HỖ TRỢ NGƯỜI KHIẾM THỊ DI CHUYỂN</div>
+
+    <div class="qr-container">
+      <img src="docs/qr-donghanh-gps.png" alt="Mã QR Đồng Hành">
+    </div>
+
+    <div class="steps">
+      <strong>HƯỚNG DẪN KẾT NỐI BẬT GPS:</strong>
+      <ol>
+        <li>Mở camera điện thoại hướng vào mã QR này.</li>
+        <li>Chạm vào liên kết thông báo xuất hiện trên màn hình.</li>
+        <li>Chọn <b>"Cho phép" (Allow)</b> khi trình duyệt xin quyền vị trí.</li>
+      </ol>
+      <div style="margin-top: 8px; font-size: 13px; color: #166534;">
+        🔊 <i>Hệ thống sẽ tự động phát âm thanh xác nhận và truyền tọa độ GPS về cho gia đình!</i>
+      </div>
+    </div>
+
+    <div class="url">
+      Liên kết trực tiếp: https://iot.chongziapp.id.vn/?role=phone&amp;auto=gps
+    </div>
+
+    <div class="btn-row">
+      <button onclick="window.print()">🖨️ In Tem Này Để Dán Vào Hộp</button>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -320,6 +320,12 @@ if (!session && queryRole && ['caregiver','phone'].includes(queryRole)) {
         showPage('phone');
         modeBanner.className = 'mode-banner live';
         modeBanner.textContent = 'ĐÃ KẾT NỐI · ĐIỆN THOẠI ĐỒNG HÀNH';
+        if (urlParams.get('auto') === 'gps' || urlParams.get('auto') === '1') {
+          setTimeout(() => {
+            speakText('Đã kết nối thiết bị Đồng Hành. Vui lòng chọn Cho phép truy cập vị trí.', true);
+            if (startGps) startGps.click();
+          }, 400);
+        }
       } else {
         showPage('overview');
       }
