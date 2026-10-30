@@ -89,6 +89,28 @@ function render(){
   // Cùng tag với thông báo đẩy (`<event>:sos`) nên không hiện trùng khi máy đã đăng ký push.
   if(notify&&!firstLoad&&!demo&&'Notification'in window&&Notification.permission==='granted')for(const e of sos)if(!knownSos.has(e.id))new Notification('SOS: người thân cần hỗ trợ',{body:`${sources[e.source]||e.source} cần hỗ trợ. Mở web để xem chi tiết.`,tag:e.id+':sos'});
   updateAlarm(sos);
+  if(voiceEnabled && !firstLoad){
+    if(newest?.has_image && newest?.ai?.status === 'ready' && newest?.ai?.summary){
+      const aiKey = newest.id + ':' + newest.ai.summary;
+      if(lastAnnouncedAiKey !== aiKey){
+        lastAnnouncedAiKey = aiKey;
+        speakText('Kết quả nhận diện AI: ' + newest.ai.summary);
+      }
+    }
+    if(isLive && valid && device.state.distance_cm < 40 && !device.state.simulated){
+      const tNow = Date.now()/1000;
+      if(tNow - lastDistanceAlertTime > 8){
+        lastDistanceAlertTime = tNow;
+        speakText('Cảnh báo: Vật cản phía trước rất gần, khoảng ' + Math.round(device.state.distance_cm) + ' centimét.');
+      }
+    }
+    if(sos.length && !lastSosSpoken){
+      lastSosSpoken = true;
+      speakText('Khẩn cấp: Có tín hiệu SOS cần trợ giúp!');
+    } else if(!sos.length){
+      lastSosSpoken = false;
+    }
+  }
   $('aiInfo').textContent=demo?'Minh họa':({none:'Chưa bật AI',segformer:'SegFormer-B0 trên máy chủ',gemini:'Gemini'})[data.ai_provider]||'Chưa rõ';
   knownSos=new Set(sos.map(e=>e.id));firstLoad=false;
   if(page==='history')renderHistory();
@@ -99,6 +121,44 @@ function renderMessages(){
   $('messageList').innerHTML=messages.length?messages.map(m=>`<div class="feed-item msg-item${m.read_at?'':' unread'}" tabindex="0" role="button" data-msg="${esc(m.id)}" data-event="${esc(m.event_id)}"><span class="event-dot ${m.level==='sos'?'sos':'warn'}">${m.level==='sos'?'!':'⌁'}</span><div><h3>${esc(m.title)}</h3><p>${esc(m.body)}</p></div><time>${esc(timeText(m.created_at))}</time></div>`).join(''):'<div class="empty-state">Chưa có tin nhắn. SOS và cảnh báo rơi gậy sẽ xuất hiện ở đây.</div>';
   $('messageList').querySelectorAll('[data-msg]').forEach(el=>{const open=async()=>{const m=messages.find(x=>x.id===el.dataset.msg);if(m&&!m.read_at){m.read_at=Date.now()/1000;unreadMessages=Math.max(0,unreadMessages-1);if(!demo)post('/api/v1/messages/read',{ids:[m.id]}).catch(()=>{});renderMessages();}openEvent(data?.events.find(e=>e.id===el.dataset.event));};el.onclick=open;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};});
 }
+// ---- PHÁT ÂM THANH GIỌNG NÓI TIẾNG VIỆT (Web Speech API) ----
+let voiceEnabled = localStorage.getItem('donghanh-voice') !== 'false';
+let lastSpokenText = '', lastSpokenTime = 0;
+let lastAnnouncedAiKey = '', lastDistanceAlertTime = 0, lastSosSpoken = false;
+
+function updateVoiceUI(){
+  if(voiceToggle){
+    voiceToggle.textContent = voiceEnabled ? '🔊 Giọng đọc: Bật' : '🔇 Giọng đọc: Tắt';
+    voiceToggle.className = 'button small ' + (voiceEnabled ? 'secondary' : '');
+  }
+}
+
+function speakText(text, force=false){
+  if(!text || (!voiceEnabled && !force) || !('speechSynthesis' in window)) return;
+  const now = Date.now();
+  if(!force && text === lastSpokenText && (now - lastSpokenTime < 10000)) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'vi-VN';
+    u.rate = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const vi = voices.find(v => v.lang && (v.lang.includes('vi') || v.lang.includes('VN')));
+    if(vi) u.voice = vi;
+    window.speechSynthesis.speak(u);
+    lastSpokenText = text;
+    lastSpokenTime = now;
+  }catch(e){}
+}
+
+function toggleVoice(){
+  voiceEnabled = !voiceEnabled;
+  localStorage.setItem('donghanh-voice', voiceEnabled);
+  updateVoiceUI();
+  if(voiceEnabled) speakText('Đã bật giọng đọc cảnh báo.', true);
+  else{ window.speechSynthesis?.cancel(); toast('Đã tắt giọng đọc cảnh báo.'); }
+}
+
 // Âm báo SOS khi trang đang mở. Trình duyệt chỉ cho phát âm sau lần chạm/nhấn đầu tiên trên trang.
 function unlockAudio(){if(!audio&&(window.AudioContext||window.webkitAudioContext)){try{audio=new(window.AudioContext||window.webkitAudioContext)();}catch{}}audio?.resume?.();}
 ['pointerdown','keydown'].forEach(t=>document.addEventListener(t,unlockAudio,{once:false,passive:true}));
@@ -229,3 +289,12 @@ window.addEventListener('beforeunload',()=>{stopCamera();stopGps();});
 $('clock').textContent=new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'long',year:'numeric'});
 if(session?.role==='phone'){showPage('phone');$('modeBanner').textContent='ĐÃ KẾT NỐI BẰNG KHÓA ĐIỆN THOẠI';}else showPage(location.hash.slice(1)||'overview');
 refresh().then(refreshPushStatus);setInterval(refresh,2500);
+
+if(voiceToggle) voiceToggle.onclick = toggleVoice;
+if(speakAiBtn) speakAiBtn.onclick = () => {
+  const s = aiSummary?.textContent?.trim();
+  if(s && !s.includes('Chưa có ảnh') && !s.includes('Chưa cài mô hình')) speakText('Kết quả nhận diện AI: ' + s, true);
+  else speakText('Hiện chưa có kết quả phân tích hình ảnh từ AI.', true);
+};
+if(phoneSpeakTest) phoneSpeakTest.onclick = () => speakText('Hệ thống Đồng Hành đã sẵn sàng phát âm thanh cảnh báo.', true);
+updateVoiceUI();
