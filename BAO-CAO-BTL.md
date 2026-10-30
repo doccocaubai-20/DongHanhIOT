@@ -27,7 +27,7 @@ Người khiếm thị gặp vô vàn rào cản và nguy cơ tai nạn khi tham
 
 ### 1.2. Mục tiêu của đề tài
 Xây dựng một hệ sinh thái thiết bị hỗ trợ đeo người (Wearable IoT Assistive Ecosystem) bao gồm:
-1. **Khối thiết bị đeo ngực (Chest Unit):** Phát hiện vật cản tầm trung - cao, cảnh báo xúc giác (rung) và âm thanh (còi), tích hợp nút bấm khẩn cấp SOS.
+1. **Khối thiết bị đeo ngực (Chest Unit):** Gồm vi điều khiển trung tâm ESP32 DevKit phát hiện vật cản tầm trung - cao, cảnh báo xúc giác (rung), âm thanh (còi), các nút bấm khẩn cấp SOS; kết hợp cùng **Module camera ESP32-CAM** thu thập hình ảnh quang học phía trước người khiếm thị phục vụ phân tích AI.
 2. **Khối gậy thông minh (Cane Unit):** Phát còi định vị tìm gậy hai chiều, tích hợp cảm biến phát hiện rơi ngã.
 3. **Mạng truyền thông song công (Dual Communication):** Kết hợp sóng vô tuyến tầm ngắn **ESP-NOW** (an toàn sinh mạng nội bộ, hoạt động 100% không cần Internet) và mạng viễn thông đám mây **RESTful HTTPS** qua Wi-Fi / 4G Hotspot.
 4. **Trung tâm giám sát đám mây (Cloud Dashboard PWA):** Dành cho người thân theo dõi vị trí, lịch sử cảnh báo, pin và điều khiển tìm gậy từ xa.
@@ -39,7 +39,7 @@ Xây dựng một hệ sinh thái thiết bị hỗ trợ đeo người (Wearabl
 
 ### 2.1. Phân loại theo thang đo Arshdeep Bahga & Vijay Madisetti
 Hệ thống **Đồng Hành** đáp ứng đầy đủ tiêu chí của **Hệ thống IoT Cấp 5 (Level 5 IoT System)**:
-* **Hệ thống đa nút (Multiple Nodes):** Gồm 2 vi điều khiển hoạt động độc lập (ESP32 DevKit ở ngực và ESP32-C3 Super Mini ở gậy).
+* **Hệ thống đa nút (Multiple Nodes):** Gồm các vi điều khiển chuyên trách hoạt động phối hợp: **ESP32 DevKit** (điều phối trung tâm khối ngực), **ESP32-CAM** (thu nhận thị giác máy tính ở ngực) và **ESP32-C3 Super Mini** (định vị và cảnh báo ở gậy).
 * **Điều phối cục bộ (Local Coordinator):** Sử dụng giao thức không dây trực tiếp **ESP-NOW** điều phối giữa các nút biên với độ trễ < 5ms mà không cần Router hay Gateway trung gian.
 * **Đám mây hóa và Phân tích tập trung (Cloud Analytics & Storage):** Dữ liệu đo đạc (telemetry) được đẩy lên Cloud Server (FastAPI + SQLite), hỗ trợ phân tích AI (SegFormer / Gemini Vision).
 * **Ứng dụng điều khiển người dùng:** Web App Dashboard PWA cho phép người thân giám sát và tương tác hai chiều từ bất kỳ đâu trên thế giới.
@@ -68,14 +68,15 @@ Hệ thống **Đồng Hành** đáp ứng đầy đủ tiêu chí của **Hệ 
                                          | Wi-Fi Hotspot (802.11 b/g/n)
          +-------------------------------+-------------------------------+
          |                                                               |
-+--------+------------------------+             +------------------------+-------+
-|   THIẾT BỊ ĐEO NGỰC (CHEST)     |             |       THIẾT BỊ GẬY (CANE)      |
-| • ESP32 DevKit V1 (30 chân)     |   ESP-NOW   | • ESP32-C3 Super Mini (RISC-V) |
-| • Cảm biến siêu âm HC-SR04      |<----------->| • Active Buzzer đa kênh (5,21) |
-| • Motor rung xúc giác           | (Direct 2.4)| • Nút bấm dừng còi (GPIO 9)    |
-| • Còi Buzzer tần số cao (D13)   |  < 5ms lat  | • Pin sạc nhỏ gọn              |
-| • Nút SOS / Privacy / Stop/Find |             |                                |
-+---------------------------------+             +--------------------------------+
++--------+------------------------------------+         +------------------------+-------+
+|        THIẾT BỊ ĐEO NGỰC (CHEST UNIT)       |         |       THIẾT BỊ GẬY (CANE)      |
+| 1. ESP32 DevKit V1 (Bo điều khiển chính):   | ESP-NOW | • ESP32-C3 Super Mini (RISC-V) |
+|    • Cảm biến siêu âm HC-SR04 (quét cự ly)  |<------->| • Active Buzzer đa kênh (5,21) |
+|    • Motor rung xúc giác + Còi D13          | (Direct)| • Nút bấm dừng còi (GPIO 9)    |
+|    • 4 Nút: SOS / Privacy / Stop / Find     | < 5ms   | • Nguồn sạc nhỏ gọn            |
+| 2. ESP32-CAM AI Thinker (Module thị giác):  |         |                                |
+|    • Camera OV2640 chụp ảnh JPEG gửi AI     |         |                                |
++---------------------------------------------+         +--------------------------------+
 ```
 
 ---
@@ -86,12 +87,12 @@ Hệ thống **Đồng Hành** đáp ứng đầy đủ tiêu chí của **Hệ 
 
 | Tên linh kiện | Vai trò trong hệ thống | Giao tiếp / Chân kết nối |
 | :--- | :--- | :--- |
-| **ESP32 DevKit V1 (30 chân)** | Vi điều khiển trung tâm khối đeo ngực | Wi-Fi 2.4GHz, ESP-NOW, GPIOs |
+| **ESP32 DevKit V1 (30 chân)** | Vi điều khiển điều phối trung tâm khối đeo ngực | Wi-Fi 2.4GHz, ESP-NOW, GPIOs |
+| **ESP32-CAM (AI Thinker + OV2640)** | Module camera thị giác gắn ngực chụp ảnh gửi AI | Wi-Fi, Cảm biến ảnh OV2640 2MP |
 | **ESP32-C3 Super Mini** | Vi điều khiển khối gậy cầm tay (siêu nhỏ) | RISC-V 160MHz, ESP-NOW, GPIOs |
 | **Cảm biến siêu âm HC-SR04** | Đo khoảng cách vật cản phía trước (2 - 400 cm) | D32 (TRIG), D35 (ECHO) |
 | **Motor rung DC Mini (Coin Motor)** | Cảnh báo xúc giác phân cấp cho người khiếm thị | D25 (Transistor NPN / Opto) |
 | **Active/Passive Buzzer** | Phát âm thanh cảnh báo cự ly gần & báo động SOS | D13 (Áo) và GPIO 5, 21, 3, 4 (Gậy) |
-| **Biến trở xoay 10k (Potentiometer)** | Giả lập chỉnh khoảng cách hoặc âm lượng | D34 (ADC1 Chân chỉ đọc) |
 | **Nút nhấn công tắc (4 nút)** | Nút SOS (D27), Privacy (D14), Stop (D12), Find (D33) | Input Pullup |
 | **Nguồn cấp di động** | Cấp nguồn 5V ổn định cho ESP32 và cảm biến | Pin sạc dự phòng Mini 5V qua cổng Type-C / MicroUSB |
 
@@ -106,7 +107,6 @@ Hệ thống **Đồng Hành** đáp ứng đầy đủ tiêu chí của **Hệ 
 * `GPIO 14`: Nút bấm **Privacy** (tạm ngắt truyền dữ liệu hình ảnh/vị trí).
 * `GPIO 12`: Nút bấm **Stop Alarm** (tắt còi khẩn cấp tại chỗ).
 * `GPIO 33`: Nút bấm **Find Cane** (gửi sóng ESP-NOW kích hoạt còi trên gậy).
-* `GPIO 34`: Chân đọc tín hiệu biến trở **Potentiometer** (ADC1).
 
 #### B. Trên ESP32-C3 Super Mini (Khối Gậy):
 * `GPIO 5, 21, 3, 4`: Mảng chân xuất xung kích còi **Buzzer** trên gậy (kết nối song song/đa chân để tối đa hóa cường độ âm thanh ngoài đường phố).
@@ -123,8 +123,6 @@ Hệ thống **Đồng Hành** đáp ứng đầy đủ tiêu chí của **Hệ 
 ## 4. GIAO THỨC TRUYỀN THÔNG VÀ BẢO MẬT (NETWORKING)
 
 ### 4.1. Cơ chế an toàn song công (Dual Communication Strategy)
-Một trong những điểm sáng nhất của đề tài là kiến trúc **Offline-First Resilience**:
-
 1. **Tầng an toàn sinh mạng (Local Safety Layer - ESP-NOW):**
    * Sử dụng chuẩn sóng MAC Layer 2.4 GHz độc quyền của Espressif.
    * Không cần thông qua Access Point (AP), không cần mật khẩu Wi-Fi, không cần IP mạng.
