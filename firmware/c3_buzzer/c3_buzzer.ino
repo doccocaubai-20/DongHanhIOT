@@ -46,9 +46,17 @@ void setBuzzer(bool on) {
   static bool current = false;
   if (current == on) return;
   current = on;
+#if PASSIVE_BUZZER
+  if (on) {
+    for (int i = 0; i < NUM_BUZZER_PINS; i++) tone(BUZZER_PINS[i], 2700);
+  } else {
+    for (int i = 0; i < NUM_BUZZER_PINS; i++) { noTone(BUZZER_PINS[i]); digitalWrite(BUZZER_PINS[i], LOW); }
+  }
+#else
   for (int i = 0; i < NUM_BUZZER_PINS; i++) {
     digitalWrite(BUZZER_PINS[i], on ? HIGH : LOW);
   }
+#endif
 }
 
 // Task riêng chạy mỗi 10 ms: nhịp còi, nút BOOT tắt còi, LED trạng thái
