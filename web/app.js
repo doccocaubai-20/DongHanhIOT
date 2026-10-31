@@ -122,41 +122,69 @@ function renderMessages(){
   $('messageList').querySelectorAll('[data-msg]').forEach(el=>{const open=async()=>{const m=messages.find(x=>x.id===el.dataset.msg);if(m&&!m.read_at){m.read_at=Date.now()/1000;unreadMessages=Math.max(0,unreadMessages-1);if(!demo)post('/api/v1/messages/read',{ids:[m.id]}).catch(()=>{});renderMessages();}openEvent(data?.events.find(e=>e.id===el.dataset.event));};el.onclick=open;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};});
 }
 // ---- PHÁT ÂM THANH GIỌNG NÓI TIẾNG VIỆT (Web Speech API) ----
+// ---- PHÁT ÂM THANH GIỌNG NÓI TIẾNG VIỆT (ViFastTts Services + Web Speech API fallback) ----
 let voiceEnabled = localStorage.getItem('donghanh-voice') !== 'false';
 let lastSpokenText = '', lastSpokenTime = 0;
 let lastAnnouncedAiKey = '', lastDistanceAlertTime = 0, lastSosSpoken = false;
+let currentTtsAudio = null;
 
 function updateVoiceUI(){
   if(voiceToggle){
-    voiceToggle.textContent = voiceEnabled ? '🔊 Giọng đọc: Bật' : '🔇 Giọng đọc: Tắt';
+    voiceToggle.textContent = voiceEnabled ? '🔊 Giọng đọc: ViFast' : '🔇 Giọng đọc: Tắt';
     voiceToggle.className = 'button small ' + (voiceEnabled ? 'secondary' : '');
   }
 }
 
 function speakText(text, force=false){
-  if(!text || (!voiceEnabled && !force) || !('speechSynthesis' in window)) return;
+  if(!text || (!voiceEnabled && !force)) return;
   const now = Date.now();
   if(!force && text === lastSpokenText && (now - lastSpokenTime < 10000)) return;
-  try{
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'vi-VN';
-    u.rate = 1.0;
-    const voices = window.speechSynthesis.getVoices();
-    const vi = voices.find(v => v.lang && (v.lang.includes('vi') || v.lang.includes('VN')));
-    if(vi) u.voice = vi;
-    window.speechSynthesis.speak(u);
-    lastSpokenText = text;
-    lastSpokenTime = now;
-  }catch(e){}
+  lastSpokenText = text;
+  lastSpokenTime = now;
+
+  // Dừng âm thanh đang phát trước đó nếu có
+  if(currentTtsAudio){
+    try{ currentTtsAudio.pause(); currentTtsAudio = null; }catch(e){}
+  }
+  if('speechSynthesis' in window){
+    try{ window.speechSynthesis.cancel(); }catch(e){}
+  }
+
+  // 1. Ưu tiên gọi ViFastTts Services qua máy chủ (/api/v1/tts)
+  const ttsUrl = `/api/v1/tts?text=${encodeURIComponent(text)}`;
+  const audio = new Audio(ttsUrl);
+  currentTtsAudio = audio;
+
+  const playPromise = audio.play();
+  if(playPromise !== undefined){
+    playPromise.catch(err => {
+      console.warn('[ViFastTTS] Chuyển sang Web Speech API dự phòng do:', err);
+      // 2. Dự phòng (Fallback) sang Web Speech API của trình duyệt nếu lỗi mạng
+      if('speechSynthesis' in window){
+        try{
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'vi-VN';
+          u.rate = 1.0;
+          const voices = window.speechSynthesis.getVoices();
+          const vi = voices.find(v => v.lang && (v.lang.includes('vi') || v.lang.includes('VN')));
+          if(vi) u.voice = vi;
+          window.speechSynthesis.speak(u);
+        }catch(e){}
+      }
+    });
+  }
 }
 
 function toggleVoice(){
   voiceEnabled = !voiceEnabled;
   localStorage.setItem('donghanh-voice', voiceEnabled);
   updateVoiceUI();
-  if(voiceEnabled) speakText('Đã bật giọng đọc cảnh báo.', true);
-  else{ window.speechSynthesis?.cancel(); toast('Đã tắt giọng đọc cảnh báo.'); }
+  if(voiceEnabled) speakText('Đã bật giọng đọc ViFast.', true);
+  else{
+    if(currentTtsAudio){ try{ currentTtsAudio.pause(); currentTtsAudio = null; }catch(e){} }
+    window.speechSynthesis?.cancel();
+    toast('Đã tắt giọng đọc cảnh báo.');
+  }
 }
 
 // Âm báo SOS khi trang đang mở. Trình duyệt chỉ cho phát âm sau lần chạm/nhấn đầu tiên trên trang.
@@ -297,6 +325,8 @@ if(speakAiBtn) speakAiBtn.onclick = () => {
   else speakText('Hiện chưa có kết quả phân tích hình ảnh từ AI.', true);
 };
 if(phoneSpeakTest) phoneSpeakTest.onclick = () => speakText('Hệ thống Đồng Hành đã sẵn sàng phát âm thanh cảnh báo.', true);
+const testViFastBtn = $('testViFastBtn');
+if(testViFastBtn) testViFastBtn.onclick = () => { speakText('Xin chào, đây là giọng đọc tiếng Việt ViFastTts trên bảng điều khiển Đồng Hành.', true); toast('Đang gọi dịch vụ ViFastTts...'); };
 updateVoiceUI();
 
 const PRESET_CAREGIVER = 'CTR8szp5wUCA4vH3gW-nwl9RCEU7E2TimZis46pts18';

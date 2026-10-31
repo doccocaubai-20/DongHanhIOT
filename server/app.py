@@ -13,7 +13,9 @@ import threading
 import time
 import uuid
 
-from fastapi import FastAPI, Depends, Header, HTTPException, Request
+import hashlib
+import urllib.request
+from fastapi import FastAPI, Depends, Header, HTTPException, Request, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -569,5 +571,64 @@ def subscribe(body:Subscription, role=Depends(only('caregiver'))):
 def unsubscribe(body:Unsubscribe, role=Depends(only('caregiver'))):
     with lock, db() as c: c.execute('DELETE FROM push_subscriptions WHERE endpoint=?',(body.endpoint,))
     return {'ok':True}
+
+
+# ==========================================
+# DỊCH VỤ GIỌNG NÓI TIẾNG VIỆT VIFAST-TTS
+# ==========================================
+VIFAST_TTS_URL = os.getenv('VIFAST_TTS_URL', 'https://vifasttts.hoctuthien.com/api/tts')
+
+@app.get('/api/v1/tts')
+async def vifast_tts(text: str = Query(..., min_length=1, max_length=500), speed: float = 1.0):
+    """
+    Chuyển đổi văn bản thành giọng nói tiếng Việt bằng ViFastTts Services (Ngọc Huyền N0 24kHz).
+    Bộ đệm lưu trữ (cache) âm thanh tại DATA/tts_cache để phản hồi tức thì.
+    """
+    clean_text = text.strip()
+    if not clean_text:
+        raise HTTPException(400, 'Nội dung văn bản rỗng')
+
+    cache_dir = DATA / 'tts_cache'
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_key = hashlib.sha256(f"{clean_text}_{speed:.2f}".encode('utf-8')).hexdigest()
+    cache_file = cache_dir / f"{cache_key}.wav"
+
+    if cache_file.exists():
+        return FileResponse(cache_file, media_type='audio/wav')
+
+    try:
+        payload = json.dumps({
+            'text': clean_text,
+            'speed': speed,
+            'alpha': 1.5,
+            'dialect': 'north'
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            VIFAST_TTS_URL,
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'User-Agent': 'DongHanhIoT/1.0'
+            }
+        )
+
+        def fetch_audio():
+            with urllib.request.urlopen(req, timeout=10) as res:
+                if res.status == 200:
+                    return res.read()
+                return None
+
+        audio_data = await asyncio.to_thread(fetch_audio)
+        if not audio_data:
+            raise HTTPException(502, 'Lỗi kết nối ViFastTts Service')
+
+        with open(cache_file, 'wb') as f:
+            f.write(audio_data)
+
+        return Response(content=audio_data, media_type='audio/wav')
+    except Exception as e:
+        print(f"[ViFastTTS] Lỗi tổng hợp giọng nói: {e}", flush=True)
+        raise HTTPException(502, f'Dịch vụ ViFastTts không khả dụng: {e}')
 
 app.mount('/',StaticFiles(directory=ROOT/'web',html=True),name='web')
