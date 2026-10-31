@@ -3,55 +3,111 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <esp_now.h>
-#include <esp_wifi.h>
 #include "config.h"
 
-// Thời gian còi sẽ kêu đến thời điểm nào (ms)
-uint32_t buzzerUntil = 0;
+// Thời gian chờ tối đa mỗi request HTTP (kết nối + đọc). Server qua Cloudflare có lúc mất >1 giây,
+// cộng TX 8.5dBm nên cần dư; còi chạy ở task riêng nên chờ lâu không làm còi bị kẹt.
+constexpr uint16_t HTTP_TIMEOUT_MS = 4000;
+constexpr uint32_t ALARM_DURATION_MS = 25000;
+
+// Trạng thái báo động: chỉ ghi qua startAlarm()/stopAlarm() (an toàn từ mọi task),
+// chỉ buzzerTask điều khiển chân còi và LED nên HTTP chậm không làm còi bị kẹt.
+volatile bool alarmArmed = false;
+volatile uint32_t alarmUntil = 0;
+volatile bool wifiOnline = false;
+// Lệnh ESP-NOW vừa nhận (0: không có, 1: bật còi, 2: tắt còi), in log ở loop() thay vì trong callback Wi-Fi
+volatile uint8_t espNowEvent = 0;
+
 uint32_t lastPoll = 0;
 uint32_t lastState = 0;
 uint32_t lastWifiCheck = 0;
-uint32_t lastBlink = 0;
-bool ledState = false;
 
 // Cấu trúc gói tin nhận trực tiếp qua ESP-NOW
 typedef struct {
   char cmd[16];
 } DirectMsg;
 
-// Trạng thái còi hiện tại: -1: chưa khởi tạo, 0: tắt, 1: bật
-static int currentBuzzerState = -1;
+void startAlarm(uint32_t durationMs) {
+  alarmUntil = millis() + durationMs;
+  alarmArmed = true;
+}
 
+void stopAlarm() {
+  alarmArmed = false;
+}
+
+// So sánh có dấu để không lỗi khi millis() tràn số (sau ~49 ngày)
+bool alarmActive(uint32_t now) {
+  return alarmArmed && (int32_t)(alarmUntil - now) > 0;
+}
+
+// Chỉ gọi từ buzzerTask. pinMode đã đặt một lần trong setup().
 void setBuzzer(bool on) {
-  int target = on ? 1 : 0;
-  if (currentBuzzerState == target) return;
-  currentBuzzerState = target;
-
-  if (on) {
-    for (int i = 0; i < NUM_BUZZER_PINS; i++) {
-      pinMode(BUZZER_PINS[i], OUTPUT);
-      digitalWrite(BUZZER_PINS[i], HIGH); // Xuất DC 3.3V (Kêu to)
-    }
-    digitalWrite(LED_BOARD, LOW); // Bật LED báo
-  } else {
-    for (int i = 0; i < NUM_BUZZER_PINS; i++) {
-      pinMode(BUZZER_PINS[i], OUTPUT);
-      digitalWrite(BUZZER_PINS[i], LOW);  // Dập 0V (Tắt hoàn toàn)
-    }
-    digitalWrite(LED_BOARD, HIGH); // Tắt LED báo
+  static bool current = false;
+  if (current == on) return;
+  current = on;
+  for (int i = 0; i < NUM_BUZZER_PINS; i++) {
+    digitalWrite(BUZZER_PINS[i], on ? HIGH : LOW);
   }
+}
+
+// Task riêng chạy mỗi 10 ms: nhịp còi, nút BOOT tắt còi, LED trạng thái
+void buzzerTask(void*) {
+  uint32_t lastBlink = 0;
+  uint32_t lastPress = 0;
+  bool ledState = false;
+  for (;;) {
+    uint32_t now = millis();
+
+    // Nút BOOT (GPIO9): tắt còi tại chỗ, chống dội phím 300 ms mà không chặn task
+    if (digitalRead(STOP_BUTTON_PIN) == LOW && now - lastPress >= 300) {
+      lastPress = now;
+      if (alarmActive(now)) {
+        stopAlarm();
+        Serial.println("[NUT BAM BOOT] Da an nut tat coi tai cho!");
+      }
+    }
+
+    if (alarmActive(now)) {
+      // Nhịp đôi: Kêu 0-150ms, Nghỉ 150-230ms, Kêu 230-380ms, Nghỉ 380-1000ms
+      uint32_t cycle = now % 1000;
+      bool beep = (cycle < 150) || (cycle >= 230 && cycle < 380);
+      setBuzzer(beep);
+      digitalWrite(LED_BOARD, beep ? LOW : HIGH); // LED nháy theo còi
+    } else {
+      alarmArmed = false;
+      setBuzzer(false);
+      if (wifiOnline) {
+        digitalWrite(LED_BOARD, HIGH); // Tắt LED: mạng đã sẵn sàng
+      } else if (now - lastBlink >= 300) {
+        // Đang mất kết nối: nhấp nháy LED mỗi 300ms
+        lastBlink = now;
+        ledState = !ledState;
+        digitalWrite(LED_BOARD, ledState ? LOW : HIGH);
+      }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+
+bool beginApi(HTTPClient& http, WiFiClient& client, const char* path) {
+  if (!http.begin(client, String(API_BASE) + path)) return false;
+  http.setConnectTimeout(HTTP_TIMEOUT_MS);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
+  return true;
 }
 
 // Hàm xác nhận với server rằng đã nhận lệnh (ACK)
 void ackCommand(const char* cid) {
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (WiFi.status() != WL_CONNECTED || !*cid) return;
   WiFiClient client;
   HTTPClient http;
-  String url = String(API_BASE) + "/api/v1/commands/" + cid + "/ack";
-  if (http.begin(client, url)) {
-    http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
+  String path = String("/api/v1/commands/") + cid + "/ack";
+  if (beginApi(http, client, path.c_str())) {
     http.addHeader("Content-Type", "application/json");
-    http.POST("{\"status\":\"done\"}");
+    http.POST("{\"result\":\"done\"}");
     http.end();
   }
 }
@@ -61,11 +117,8 @@ void pollCommands() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client;
   HTTPClient http;
-  String url = String(API_BASE) + "/api/v1/commands";
-  
-  if (http.begin(client, url)) {
-    http.setTimeout(1200);
-    http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
+
+  if (beginApi(http, client, "/api/v1/commands")) {
     int code = http.GET();
     if (code == 200) {
       String payload = http.getString();
@@ -78,16 +131,17 @@ void pollCommands() {
           const char* cid = cmd["id"] | "";
           if (strcmp(kind, "find") == 0 || strcmp(kind, "sos") == 0) {
             Serial.printf(">>> [LENH] Nhan lenh %s tu Server! Bat coi 25 giay...\n", kind);
-            buzzerUntil = millis() + 25000; // Kêu còi trong 25 giây
+            startAlarm(ALARM_DURATION_MS);
             ackCommand(cid);
           } else if (strcmp(kind, "stop") == 0) {
             Serial.println(">>> [LENH] Nhan lenh STOP tu Server! Tat coi ngay lap tuc!");
-            buzzerUntil = 0;
-            setBuzzer(false);
+            stopAlarm();
             ackCommand(cid);
           }
         }
       }
+    } else if (code < 0) {
+      Serial.printf("[HTTP] Hoi lenh loi: %s\n", http.errorToString(code).c_str());
     }
     http.end();
   }
@@ -98,20 +152,17 @@ void sendState() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client;
   HTTPClient http;
-  String url = String(API_BASE) + "/api/v1/state";
-  
-  if (http.begin(client, url)) {
-    http.setTimeout(1200);
-    http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
+
+  if (beginApi(http, client, "/api/v1/state")) {
     http.addHeader("Content-Type", "application/json");
-    
+
     JsonDocument doc;
     doc["uptime_s"] = millis() / 1000;
     doc["drop_alarm"] = false;
-    doc["sos_alarm"] = (buzzerUntil > millis());
+    doc["sos_alarm"] = alarmActive(millis());
     doc["sensor_valid"] = true;
     doc["distance_cm"] = nullptr;
-    
+
     String body;
     serializeJson(doc, body);
     http.POST(body);
@@ -119,20 +170,23 @@ void sendState() {
   }
 }
 
-// Callback khi nhận gói tin ESP-NOW trực tiếp từ bo ngực
-void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
-  if (len >= (int)sizeof(DirectMsg)) {
-    DirectMsg msg;
-    memcpy(&msg, data, sizeof(msg));
-    Serial.printf("[ESP-NOW] Nhan goi tin truc tiep: %s\n", msg.cmd);
-    if (strcmp(msg.cmd, "FIND") == 0 || strcmp(msg.cmd, "SOS") == 0) {
-      Serial.println(">>> [ESP-NOW] Kich hoat coi ngay lap tuc!");
-      buzzerUntil = millis() + 25000;
-    } else if (strcmp(msg.cmd, "STOP") == 0) {
-      Serial.println(">>> [ESP-NOW] Nhan lenh STOP truc tiep! Tat coi ngay!");
-      buzzerUntil = 0;
-      setBuzzer(false);
-    }
+// Callback khi nhận gói tin ESP-NOW trực tiếp từ bo ngực. Chạy trong task Wi-Fi:
+// chỉ đặt trạng thái, không in log hay điều khiển chân ở đây.
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+void onDataRecv(const esp_now_recv_info_t*, const uint8_t* data, int len) {
+#else
+void onDataRecv(const uint8_t*, const uint8_t* data, int len) {
+#endif
+  if (len <= 0) return;
+  // Chép có giới hạn và luôn kết thúc bằng '\0' để strcmp không đọc tràn
+  char cmd[sizeof(DirectMsg::cmd) + 1] = {0};
+  memcpy(cmd, data, min(len, (int)sizeof(DirectMsg::cmd)));
+  if (strcmp(cmd, "FIND") == 0 || strcmp(cmd, "SOS") == 0) {
+    startAlarm(ALARM_DURATION_MS);
+    espNowEvent = 1;
+  } else if (strcmp(cmd, "STOP") == 0) {
+    stopAlarm();
+    espNowEvent = 2;
   }
 }
 
@@ -140,7 +194,7 @@ bool espNowStarted = false;
 
 void startEspNow() {
   if (!espNowStarted && esp_now_init() == ESP_OK) {
-    esp_now_register_recv_cb(esp_now_recv_cb_t(onDataRecv));
+    esp_now_register_recv_cb(onDataRecv);
     espNowStarted = true;
     Serial.println("[ESP-NOW] San sang nhan lenh truc tiep!");
   }
@@ -155,7 +209,6 @@ void setup() {
   pinMode(LED_BOARD, OUTPUT);
   digitalWrite(LED_BOARD, HIGH); // Tắt LED
   pinMode(STOP_BUTTON_PIN, INPUT_PULLUP);
-  currentBuzzerState = 0; // Đánh dấu đã tắt còi
 
   Serial.begin(115200);
   delay(300);
@@ -163,7 +216,17 @@ void setup() {
   Serial.println("\n=======================================================");
   Serial.println("  ESP32-C3 SUPER MINI: BO PHAT COI CANH BAO (GAY)");
   Serial.println("=======================================================");
-  Serial.printf("Chân còi: GPIO %d | Chân nút tắt còi: GPIO %d\n", BUZZER_PIN, STOP_BUTTON_PIN);
+  Serial.print("Chân còi: GPIO");
+  for (int i = 0; i < NUM_BUZZER_PINS; i++) Serial.printf(" %d", BUZZER_PINS[i]);
+  Serial.printf(" | Chân nút tắt còi: GPIO %d\n", STOP_BUTTON_PIN);
+#if !ARDUINO_USB_CDC_ON_BOOT
+  // GPIO20/21 là RX/TX của UART0: khi tắt "USB CDC On Boot", Serial chạy trên UART0 nên dùng 2 chân này làm còi sẽ làm hỏng log
+  for (int i = 0; i < NUM_BUZZER_PINS; i++) {
+    if (BUZZER_PINS[i] == 20 || BUZZER_PINS[i] == 21) {
+      Serial.printf("[CANH BAO] GPIO%d trung chan UART0 cua Serial! Bat 'USB CDC On Boot' hoac bo chan nay khoi BUZZER_PINS.\n", BUZZER_PINS[i]);
+    }
+  }
+#endif
 
   // Chớp đèn LED 2 lần báo hiệu bo đã bật nguồn (giữ im lặng còi lúc khởi động)
   for (int i = 0; i < 2; i++) {
@@ -173,10 +236,16 @@ void setup() {
     delay(80);
   }
 
+  // Còi chạy độc lập với Wi-Fi/HTTP, ưu tiên cao hơn loop() (ưu tiên 1)
+  xTaskCreate(buzzerTask, "buzzer", 3072, nullptr, 3, nullptr);
+
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   // Hạ công suất phát sóng xuống 8.5dBm để chống sụt áp nguồn và chống méo sóng RF gây lỗi AUTH_EXPIRE (Reason 2)
   WiFi.setTxPower(WIFI_POWER_8_5dBm);
+
+  // Kích hoạt ESP-NOW ngay lập tức để nhận lệnh trực tiếp (hoạt động 100% offline không cần Wi-Fi)
+  startEspNow();
 
   WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
     switch (event) {
@@ -204,87 +273,65 @@ void setup() {
   Serial.println("[WiFi] Dang quet cac mang xung quanh...");
   int n = WiFi.scanNetworks(false, true);
   Serial.printf("[WiFi] Tim thay %d AP:\n", n);
-  
-  uint8_t bestBssid[6] = {0};
+
   int bestRssi = -100;
-  bool foundBssid = false;
+  int bestChannel = 0;
 
   for (int i = 0; i < n; ++i) {
     if (WiFi.SSID(i) == WIFI_SSID) {
       Serial.printf("  -> TIM THAY AP '%s' | BSSID: %s | RSSI: %d dBm | Ch: %d\n",
-        WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(), WiFi.RSSI(i), WiFi.channel(i));
+        WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(), (int)WiFi.RSSI(i), (int)WiFi.channel(i));
       if (WiFi.RSSI(i) > bestRssi) {
         bestRssi = WiFi.RSSI(i);
-        memcpy(bestBssid, WiFi.BSSID(i), 6);
-        foundBssid = true;
+        bestChannel = WiFi.channel(i);
       }
     }
   }
+  WiFi.scanDelete();
 
-  Serial.printf("\n[WiFi] Bat dau ket noi toi '%s' (TX=8.5dBm)...\n", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Khóa đúng kênh của AP: kết nối nhanh hơn, và ESP-NOW nghe cùng kênh với bo ngực (bo ngực phát trên kênh AP) ngay cả khi chưa có IP
+  Serial.printf("\n[WiFi] Bat dau ket noi toi '%s' (TX=8.5dBm, kenh %d)...\n", WIFI_SSID, bestChannel);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD, bestChannel);
 }
 
 void loop() {
   uint32_t now = millis();
 
-  // 1. Kiểm tra nút bấm BOOT (GPIO9) trên bo C3 để tắt còi tại chỗ
-  if (digitalRead(STOP_BUTTON_PIN) == LOW) {
-    if (buzzerUntil > now) {
-      Serial.println("[NUT BAM BOOT] Da an nut tat coi tai cho!");
-      buzzerUntil = 0;
-      setBuzzer(false);
-      delay(300); // Chống dội phím
-    }
+  // 1. Log lệnh ESP-NOW vừa nhận (callback không được in log)
+  uint8_t evt = espNowEvent;
+  if (evt) {
+    espNowEvent = 0;
+    Serial.println(evt == 1 ? ">>> [ESP-NOW] Kich hoat coi ngay lap tuc!" : ">>> [ESP-NOW] Nhan lenh STOP truc tiep! Tat coi ngay!");
   }
 
-  // 2. Quản lý trạng thái kết nối Wi-Fi & đèn LED báo
-  static bool wasOnline = false;
+  // 2. Quản lý trạng thái kết nối Wi-Fi (LED do buzzerTask xử lý)
   if (WiFi.status() == WL_CONNECTED) {
-    if (!wasOnline) {
-      wasOnline = true;
-      Serial.printf("[Wi-Fi] DA KET NOI THANH CONG! IP C3: %s | Server: %s\n", WiFi.localIP().toString().c_str(), API_BASE);
+    if (!wifiOnline) {
+      wifiOnline = true;
+      Serial.printf("[Wi-Fi] DA KET NOI THANH CONG! IP C3: %s | Kenh: %d | Server: %s\n",
+        WiFi.localIP().toString().c_str(), (int)WiFi.channel(), API_BASE);
       startEspNow();
     }
-    // Nếu còi không kêu: Đèn LED tắt báo mạng đã sẵn sàng
-    if (buzzerUntil <= now) {
-      digitalWrite(LED_BOARD, HIGH); // Tắt LED
-    }
   } else {
-    wasOnline = false;
-    // Đang mất kết nối: Nhấp nháy đèn LED mỗi 300ms
-    if (now - lastBlink >= 300) {
-      lastBlink = now;
-      ledState = !ledState;
-      digitalWrite(LED_BOARD, ledState ? LOW : HIGH);
+    if (wifiOnline) {
+      wifiOnline = false;
+      lastWifiCheck = now; // Cho tự kết nối lại trước, không cắt ngang ngay khi vừa rớt
     }
-    // Chỉ thử kết nối lại nếu bị ngắt sau 20 giây
-    if (now - lastWifiCheck >= 20000) {
+    // Chỉ ép kết nối lại nếu vẫn mất mạng sau 30 giây
+    if (now - lastWifiCheck >= 30000) {
       lastWifiCheck = now;
-      if (WiFi.status() != WL_CONNECTED) {
-        Serial.printf("[Wi-Fi] Thu ket noi lai (status=%d)...\n", WiFi.status());
-        WiFi.reconnect();
-      }
+      Serial.printf("[Wi-Fi] Thu ket noi lai (status=%d)...\n", WiFi.status());
+      WiFi.reconnect();
     }
   }
 
-  // 3. Xử lý âm thanh còi khi có báo động (nhịp tít tít 2 tiếng mỗi giây)
-  if (buzzerUntil > now) {
-    uint32_t cycle = now % 1000;
-    // Nhịp đôi: Kêu 0-150ms, Nghỉ 150-230ms, Kêu 230-380ms, Nghỉ 380-1000ms
-    bool beep = (cycle < 150) || (cycle >= 230 && cycle < 380);
-    setBuzzer(beep);
-  } else {
-    setBuzzer(false);
-  }
-
-  // 4. Định kỳ 1 giây hỏi lệnh từ server
+  // 3. Định kỳ 1 giây hỏi lệnh từ server
   if (now - lastPoll >= 1000) {
     lastPoll = now;
     pollCommands();
   }
 
-  // 5. Định kỳ 3 giây gửi trạng thái lên server
+  // 4. Định kỳ 3 giây gửi trạng thái lên server
   if (now - lastState >= 3000) {
     lastState = now;
     sendState();
