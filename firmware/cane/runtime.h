@@ -59,6 +59,21 @@
 #ifndef INVALID_AFTER_MISSES
 #define INVALID_AFTER_MISSES 6 // chỉ báo "không đo được" sau 6 lần đo hỏng liên tiếp (~0,5 s); 1 = báo ngay như cũ
 #endif
+#ifndef DISTANCE_DEBUG
+#define DISTANCE_DEBUG 0 // 1 = in từng lần đo thô của HC-SR04 (độ rộng xung, hết giờ, ECHO kẹt mức cao) để dò lỗi cảm biến
+#endif
+#ifndef NO_ECHO_US
+#define NO_ECHO_US 19000 // HC-SR04 phổ biến trả xung ~20 ms (~343 cm) khi không nhận được tiếng vọng
+#endif
+#ifndef NEAR_HOLD_CM
+#define NEAR_HOLD_CM 20 // vật sát hơn ~4 cm hoặc che kín cảm biến làm mất tiếng vọng: nếu lần đo trước đã gần thì giữ số gần
+#endif
+#ifndef NEAR_RELEASE_PULSES
+#define NEAR_RELEASE_PULSES 25 // 25 xung ~20 ms liên tiếp (~2 s) = vật gần đã đi, phía trước trống: thôi giữ số gần
+#endif
+#ifndef NEAR_HOLD_MS
+#define NEAR_HOLD_MS 10000 // giữ số gần tối đa 10 s, quá thì coi như cảm biến lỗi
+#endif
 // chest_cam đầy đủ dùng GPIO1/3 (UART) làm nút nên không thể in log.
 #define UART_IS_BUTTONS (APP_ROLE == 1 && !CAMERA_ONLY)
 #define LOGF(...) do{if(LOG_SERIAL&&!UART_IS_BUTTONS)Serial.printf(__VA_ARGS__);}while(0)
@@ -159,14 +174,19 @@ float readings[3]={-1,-1,-1};int readingIndex=0,readingCount=0;
 uint32_t lastMeasure=0,triggerAt=0;bool waitingEcho=false;
 // Số lần đo hỏng liên tiếp: một lần mất echo/nhiễu lẻ tẻ không làm mất số đo trên còi, rung và dashboard.
 uint8_t missCount=0;
+// Lần đo thật hợp lệ gần nhất (trước lọc trung vị), để nhận ra vật quá sát làm mất tiếng vọng.
+float lastGood=-1;uint32_t lastGoodAt=0;uint8_t noEchoRun=0;
 void publishDistance(float value){
   bool valid=value>=2&&value<=400;
+  // Mất tiếng vọng ngay sau khi đo được vật gần = vật quá sát/che cảm biến: báo gần, không nhảy ra xa hay "không đo được".
+  if(!valid&&lastGood>0&&lastGood<NEAR_HOLD_CM&&millis()-lastGoodAt<NEAR_HOLD_MS){value=lastGood;valid=true;}
+  else if(valid){lastGood=value;lastGoodAt=millis();}
   if(valid){readings[readingIndex]=value;readingIndex=(readingIndex+1)%3;readingCount=min(readingCount+1,3);float sorted[3];for(int i=0;i<readingCount;i++)sorted[i]=readings[i];for(int i=0;i<readingCount;i++)for(int j=i+1;j<readingCount;j++)if(sorted[j]<sorted[i]){float t=sorted[i];sorted[i]=sorted[j];sorted[j]=t;}value=sorted[readingCount/2];}
   else{
     if(missCount<255)missCount++;
     // Chưa đủ số lần hỏng liên tiếp: giữ nguyên số đo hợp lệ gần nhất.
     if(missCount<INVALID_AFTER_MISSES)return;
-    readingCount=0;readingIndex=0;
+    readingCount=0;readingIndex=0;lastGood=-1;
   }
   if(valid)missCount=0;
   portENTER_CRITICAL(&stateMux);shared.distance=valid?value:-1;shared.sensorValid=valid;portEXIT_CRITICAL(&stateMux);
@@ -178,14 +198,21 @@ void distanceTick(uint32_t now){
 #else
   if(waitingEcho){
     portENTER_CRITICAL(&echoMux);bool done=echoDone;uint32_t width=echoWidth;portEXIT_CRITICAL(&echoMux);
-    if(done){waitingEcho=false;publishDistance(width*.0343f/2.0f);}
+    if(done){waitingEcho=false;if(DISTANCE_DEBUG)LOGF("[raw] %lu us -> %.1f cm\n",(unsigned long)width,width*.0343f/2.0f);
+      // Xung ~20 ms = không có tiếng vọng: xa ngoài tầm (giữ như số đo xa), trừ khi vừa đo được vật gần (publishDistance giữ số gần).
+      // Vật gần lẫn tay nghiêng hay xen vài xung 20 ms; nhiều xung liền nhau thì đúng là phía trước đã trống.
+      if(width>=NO_ECHO_US){if(noEchoRun<255)noEchoRun++;}else noEchoRun=0;
+      bool noEcho=width>=NO_ECHO_US&&noEchoRun<NEAR_RELEASE_PULSES&&lastGood>0&&lastGood<NEAR_HOLD_CM;
+      publishDistance(noEcho?-1:width*.0343f/2.0f);}
     else if((uint32_t)(micros()-triggerAt)>30000){
-      waitingEcho=false;portENTER_CRITICAL(&echoMux);echoListening=false;portEXIT_CRITICAL(&echoMux);publishDistance(-1);
+      waitingEcho=false;portENTER_CRITICAL(&echoMux);bool rose=echoRise!=0;echoListening=false;portEXIT_CRITICAL(&echoMux);
+      if(DISTANCE_DEBUG)LOGF("[raw] het gio 30ms (%s)\n",rose?"ECHO len nhung khong xuong":"khong thay ECHO len");
+      publishDistance(-1);
     }
   }
   if(!waitingEcho&&now-lastMeasure>=80){
     lastMeasure=now;
-    if(digitalRead(ECHO)){publishDistance(-1);return;}
+    if(digitalRead(ECHO)){if(DISTANCE_DEBUG)LOGF("[raw] ECHO van HIGH truoc khi phat\n");publishDistance(-1);return;}
     portENTER_CRITICAL(&echoMux);echoRise=0;echoWidth=0;echoDone=false;echoListening=true;portEXIT_CRITICAL(&echoMux);
     triggerAt=micros();waitingEcho=true;digitalWrite(TRIG,HIGH);delayMicroseconds(12);digitalWrite(TRIG,LOW);
   }
