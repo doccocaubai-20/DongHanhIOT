@@ -7,7 +7,10 @@ const noticeNames = {sent:'Đã đẩy tới điện thoại',pending:'Đang ch�
 const stageNames = {sos:'Tin SOS',image:'Tin kèm ảnh',drop:'Tin rơi gậy'};
 let firstMessages = true, messages = [], unreadMessages = 0, mutedSos = new Set(), audio = null, alarmTimer = null, installPrompt = null;
 const timeText = t => t ? new Date(t*1000).toLocaleString('vi-VN') : 'Chưa có thời gian';
-const age = t => t ? Math.max(0, Math.floor(Date.now()/1000-t)) : Infinity;
+// Giờ server trừ giờ máy này (giây). Tuổi dữ liệu tính theo giờ server: máy xem lệch giờ (vd. nhanh 1 phút)
+// không còn làm mọi thiết bị bị coi là mất tín hiệu và số liệu trống.
+let clockOffset = 0;
+const age = t => t ? Math.max(0, Math.floor(Date.now()/1000+clockOffset-t)) : Infinity;
 const ageText = t => {const s=age(t);return !Number.isFinite(s)?'chưa có':s<60?`${s} giây trước`:s<3600?`${Math.floor(s/60)} phút trước`:`${Math.floor(s/3600)} giờ trước`;};
 const scene = () => `<div class="demo-scene"><svg viewBox="0 0 800 480" role="img" aria-label="Hình vẽ minh họa lối đi, không phải ảnh từ thiết bị"><rect width="800" height="480" fill="#dce8d9"/><rect y="0" width="800" height="245" fill="#d5e3df"/><circle cx="650" cy="88" r="39" fill="#f5edd0"/><path d="M0 240L160 146 300 250 468 168 620 220 800 157V330H0Z" fill="#bdcfb6"/><path d="M310 230H458L740 480H50Z" fill="#d8d5c1"/><path d="M340 230H430L568 480H204Z" fill="#ede8d7"/><path d="M387 240L391 480" stroke="#d7d2bf" stroke-width="2"/><path d="M290 313H488M247 383H530" stroke="#d5ceba" stroke-width="2"/><path d="M0 290Q135 242 304 260L204 480H0Z" fill="#8fa77d"/><path d="M454 247Q626 238 800 292V480H568Z" fill="#a1b98d"/><g fill="#638168"><ellipse cx="119" cy="171" rx="70" ry="103"/><ellipse cx="697" cy="188" rx="65" ry="90"/></g><path d="M119 193V368M697 208V379" stroke="#73806a" stroke-width="12"/><g fill="#b3c895"><ellipse cx="48" cy="341" rx="66" ry="33"/><ellipse cx="766" cy="358" rx="92" ry="39"/></g><path d="M601 293H680V310H601Z" fill="#a69d7b"/><path d="M615 309V340M668 309V340" stroke="#888b71" stroke-width="5"/><path d="M26 27H58M26 27V59M774 27H742M774 27V59M26 453H58M26 453V421M774 453H742M774 453V421" stroke="#fff8e7" stroke-width="2" fill="none"/></svg><span class="scene-stamp">HÌNH MINH HỌA · KHÔNG PHẢI CAMERA</span><span class="scene-label">Kết nối máy chủ để xem ảnh thật từ thiết bị.</span></div>`;
 let session = null;
@@ -266,7 +269,7 @@ async function openEvent(event){
 function simulateSos(){if(!demo)return;data.events.unshift({id:'demo-'+Date.now(),kind:'sos',source:'test',received_at:Date.now()/1000,has_image:false,image_status:'camera_unavailable',demo:true,ai:{status:'waiting',risk:'unknown'},details:'Tình huống mô phỏng. Chưa gửi thông tin đến thiết bị hay người khác.'});render();toast('Đã tạo một SOS minh họa. Bấm “Xem SOS ngay” để thử xác nhận.');}
 async function refresh(){
   if(busy)return;busy=true;
-  try{if(demo){data??=demoData();render();await loadMessages();}else if(session.role==='phone'){await pollPhone();}else{data=await api('/api/v1/dashboard');failed=false;render();if(data.unread_messages!==unreadMessages||page==='messages'||firstMessages){firstMessages=false;await loadMessages();}}}
+  try{if(demo){data??=demoData();render();await loadMessages();}else if(session.role==='phone'){await pollPhone();}else{data=await api('/api/v1/dashboard');if(data.server_time)clockOffset=data.server_time-Date.now()/1000;failed=false;render();if(data.unread_messages!==unreadMessages||page==='messages'||firstMessages){firstMessages=false;await loadMessages();}}}
   catch(e){failed=true;if(data)render();else{$('modeBanner').textContent='Không kết nối được: '+e.message;$('modeBanner').className='mode-banner error-mode';}}
   finally{busy=false;}
 }
