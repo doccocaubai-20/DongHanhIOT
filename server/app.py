@@ -576,12 +576,14 @@ def unsubscribe(body:Unsubscribe, role=Depends(only('caregiver'))):
 # ==========================================
 # DỊCH VỤ GIỌNG NÓI TIẾNG VIỆT VIFAST-TTS
 # ==========================================
-VIFAST_TTS_URL = os.getenv('VIFAST_TTS_URL', 'https://vifasttts.hoctuthien.com/api/tts')
+VIFAST_TTS_URL = os.getenv('VIFAST_TTS_URL', 'http://127.0.0.1:8090/api/tts')
+VIFAST_TTS_FALLBACK_URL = os.getenv('VIFAST_TTS_FALLBACK_URL', 'https://vifasttts.hoctuthien.com/api/tts')
 
 @app.get('/api/v1/tts')
 async def vifast_tts(text: str = Query(..., min_length=1, max_length=500), speed: float = 1.0):
     """
     Chuyển đổi văn bản thành giọng nói tiếng Việt bằng ViFastTts Services (Ngọc Huyền N0 24kHz).
+    Ưu tiên gọi dịch vụ nội bộ VPS (port 8090), tự động fallback sang đám mây dự phòng nếu cần.
     Bộ đệm lưu trữ (cache) âm thanh tại DATA/tts_cache để phản hồi tức thì.
     """
     clean_text = text.strip()
@@ -601,23 +603,43 @@ async def vifast_tts(text: str = Query(..., min_length=1, max_length=500), speed
             'text': clean_text,
             'speed': speed,
             'alpha': 1.5,
-            'dialect': 'north'
+            'dialect': 'north',
+            'source': 'donghanh'
         }).encode('utf-8')
 
-        req = urllib.request.Request(
-            VIFAST_TTS_URL,
-            data=payload,
-            headers={
-                'Content-Type': 'application/json',
-                'User-Agent': 'DongHanhIoT/1.0'
-            }
-        )
-
         def fetch_audio():
-            with urllib.request.urlopen(req, timeout=10) as res:
-                if res.status == 200:
-                    return res.read()
-                return None
+            urls = [u for u in [VIFAST_TTS_URL, VIFAST_TTS_FALLBACK_URL] if u]
+            last_err = None
+            for url in urls:
+                try:
+                    req = urllib.request.Request(
+                        url,
+                        data=payload,
+                        headers={
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'DongHanhIoT/1.0'
+                        }
+                    )
+                    with urllib.request.urlopen(req, timeout=12) as res:
+                        if res.status == 200:
+                            data = res.read()
+                            if data.startswith(b'RIFF'):
+                                return data
+                            try:
+                                js = json.loads(data.decode('utf-8'))
+                                if 'audio' in js:
+                                    import base64
+                                    return base64.b64decode(js['audio'])
+                            except Exception:
+                                pass
+                            return data
+                except Exception as err:
+                    last_err = err
+                    print(f"[ViFastTTS] Gọi {url} thất bại: {err}, thử tiếp...", flush=True)
+                    continue
+            if last_err:
+                raise last_err
+            return None
 
         audio_data = await asyncio.to_thread(fetch_audio)
         if not audio_data:
