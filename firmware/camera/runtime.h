@@ -76,6 +76,15 @@
 #ifndef NEAR_HOLD_MS
 #define NEAR_HOLD_MS 10000 // giữ số gần tối đa 10 s, quá thì coi như cảm biến lỗi
 #endif
+#ifndef HTTP_CONNECT_MS
+#define HTTP_CONNECT_MS 5000 // server qua Cloudflare có lúc mất >2 s mới kết nối; 2,5 s cũ làm hụt nhiều nhịp trạng thái liền nhau
+#endif
+#ifndef HTTP_READ_MS
+#define HTTP_READ_MS 5000
+#endif
+#ifndef HTTP_IMAGE_MS
+#define HTTP_IMAGE_MS 10000
+#endif
 // chest_cam đầy đủ dùng GPIO1/3 (UART) làm nút nên không thể in log.
 #define UART_IS_BUTTONS (APP_ROLE == 1 && !CAMERA_ONLY)
 #define LOGF(...) do{if(LOG_SERIAL&&!UART_IS_BUTTONS)Serial.printf(__VA_ARGS__);}while(0)
@@ -289,7 +298,7 @@ int requestHttp(const String& method,const String& route,const uint8_t* bytes,si
   if(url.startsWith("https://")){if(strlen(ROOT_CA)<100)return -2;secure.setCACert(ROOT_CA);ok=http.begin(secure,url);}
   else if(url.startsWith("http://")&&ALLOW_HTTP_LAN)ok=http.begin(plain,url);
   if(!ok)return -3;
-  http.setConnectTimeout(2500);http.setTimeout(strcmp(type,"image/jpeg")==0?6000:3000);
+  http.setConnectTimeout(HTTP_CONNECT_MS);http.setTimeout(strcmp(type,"image/jpeg")==0?HTTP_IMAGE_MS:HTTP_READ_MS);
   http.addHeader("Authorization",String("Bearer ")+DEVICE_TOKEN);
   http.addHeader("Content-Type",type);
   if(captured)http.addHeader("X-Captured-At",String(captured));
@@ -374,7 +383,11 @@ void networkTask(void*){
   uint32_t reconnectAt=0,stateAt=0,pollAt=0,retryAt=0;
   [[maybe_unused]] uint32_t findAt=0,findRetryAt=0; // chỉ chest_cam dùng
   bool savedPrivacy=snapshot().periodic;[[maybe_unused]] bool findRequestPending=false;
-  WiFi.mode(WIFI_STA);WiFi.setSleep(false);WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+  // Nhà có nhiều điểm phát cùng tên (mesh): mặc định ESP32 vào điểm phát tìm thấy đầu tiên, có thể rất yếu.
+  // Quét hết các kênh và chọn điểm phát mạnh nhất.
+  WiFi.mode(WIFI_STA);WiFi.setSleep(false);
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+  WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
   // SNTP dùng IP, không dùng tên miền: core 3.3.x có lỗi hostByName() xóa cache DNS không khóa TCPIP,
   // làm callback DNS đang chờ của SNTP chạy sai luồng và assert "Required to lock TCPIP core" (crash ngay sau khi có Wi-Fi).
   configTime(0,0,"162.159.200.1","216.239.35.0"); // time.cloudflare.com, time.google.com
@@ -420,7 +433,7 @@ void networkTask(void*){
       if(now-reconnectAt>5000){reconnectAt=now;WiFi.reconnect();LOGF("[wifi] dang ket noi '%s'...\n",WIFI_SSID);}
       vTaskDelay(pdMS_TO_TICKS(50));continue;
     }
-    if(!wasOnline){wasOnline=true;LOGF("[wifi] OK, IP %s, API_BASE %s\n",WiFi.localIP().toString().c_str(),API_BASE);}
+    if(!wasOnline){wasOnline=true;LOGF("[wifi] OK, IP %s, AP %s, RSSI %d dBm, API_BASE %s\n",WiFi.localIP().toString().c_str(),WiFi.BSSIDstr().c_str(),(int)WiFi.RSSI(),API_BASE);}
 #if APP_ROLE == 1
     if(findRequestPending&&now-findRetryAt>=1000){
       findRetryAt=now;String response;
