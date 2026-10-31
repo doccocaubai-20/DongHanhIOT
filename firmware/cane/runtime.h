@@ -56,6 +56,9 @@
 #ifndef CAMERA_XCLK_HZ
 #define CAMERA_XCLK_HZ 10000000 // 10 MHz thay 20 MHz: bớt nhiễu Wi-Fi và bớt tràn bộ đệm khung (FB-OVF) trên ESP32-CAM
 #endif
+#ifndef INVALID_AFTER_MISSES
+#define INVALID_AFTER_MISSES 6 // chỉ báo "không đo được" sau 6 lần đo hỏng liên tiếp (~0,5 s); 1 = báo ngay như cũ
+#endif
 // chest_cam đầy đủ dùng GPIO1/3 (UART) làm nút nên không thể in log.
 #define UART_IS_BUTTONS (APP_ROLE == 1 && !CAMERA_ONLY)
 #define LOGF(...) do{if(LOG_SERIAL&&!UART_IS_BUTTONS)Serial.printf(__VA_ARGS__);}while(0)
@@ -154,10 +157,18 @@ void ARDUINO_ISR_ATTR echoISR(){
 }
 float readings[3]={-1,-1,-1};int readingIndex=0,readingCount=0;
 uint32_t lastMeasure=0,triggerAt=0;bool waitingEcho=false;
+// Số lần đo hỏng liên tiếp: một lần mất echo/nhiễu lẻ tẻ không làm mất số đo trên còi, rung và dashboard.
+uint8_t missCount=0;
 void publishDistance(float value){
   bool valid=value>=2&&value<=400;
   if(valid){readings[readingIndex]=value;readingIndex=(readingIndex+1)%3;readingCount=min(readingCount+1,3);float sorted[3];for(int i=0;i<readingCount;i++)sorted[i]=readings[i];for(int i=0;i<readingCount;i++)for(int j=i+1;j<readingCount;j++)if(sorted[j]<sorted[i]){float t=sorted[i];sorted[i]=sorted[j];sorted[j]=t;}value=sorted[readingCount/2];}
-  else{readingCount=0;readingIndex=0;}
+  else{
+    if(missCount<255)missCount++;
+    // Chưa đủ số lần hỏng liên tiếp: giữ nguyên số đo hợp lệ gần nhất.
+    if(missCount<INVALID_AFTER_MISSES)return;
+    readingCount=0;readingIndex=0;
+  }
+  if(valid)missCount=0;
   portENTER_CRITICAL(&stateMux);shared.distance=valid?value:-1;shared.sensorValid=valid;portEXIT_CRITICAL(&stateMux);
 }
 void distanceTick(uint32_t now){
