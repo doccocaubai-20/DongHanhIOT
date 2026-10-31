@@ -11,6 +11,7 @@
 #include <freertos/task.h>
 #include <esp_random.h>
 #include <time.h>
+#include <esp_task_wdt.h>
 #include "config.h"
 #if APP_ROLE == 1
 #include "esp_camera.h"
@@ -39,6 +40,21 @@
 #endif
 #ifndef LOG_SERIAL
 #define LOG_SERIAL 1 // in trạng thái ra Serial Monitor 115200 để dò lỗi khi lắp
+#endif
+#ifndef NETWORK_WDT_S
+#define NETWORK_WDT_S 60 // tác vụ mạng/camera treo quá 60 s (chụp ảnh, HTTP kẹt) thì tự khởi động lại; 0 = tắt
+#endif
+#ifndef OFFLINE_RESTART_MIN
+#define OFFLINE_RESTART_MIN (CAMERA_ONLY?10:0) // ESP32-CAM chỉ chụp: 10 phút không gọi được server thì khởi động lại; 0 = tắt
+#endif
+#ifndef POLL_INTERVAL_MS
+#define POLL_INTERVAL_MS (CAMERA_ONLY?1000:2000) // camera-only hỏi lệnh nhanh hơn để chụp ngay khi người nhà bấm
+#endif
+#ifndef STATE_INTERVAL_MS
+#define STATE_INTERVAL_MS (CAMERA_ONLY?5000:3000) // camera-only không là bo điều khiển, gửi trạng thái thưa hơn để bớt chặn hàng request
+#endif
+#ifndef CAMERA_XCLK_HZ
+#define CAMERA_XCLK_HZ 10000000 // 10 MHz thay 20 MHz: bớt nhiễu Wi-Fi và bớt tràn bộ đệm khung (FB-OVF) trên ESP32-CAM
 #endif
 // chest_cam đầy đủ dùng GPIO1/3 (UART) làm nút nên không thể in log.
 #define UART_IS_BUTTONS (APP_ROLE == 1 && !CAMERA_ONLY)
@@ -208,7 +224,7 @@ bool cameraStart(){
   c.ledc_channel=LEDC_CHANNEL_0;c.ledc_timer=LEDC_TIMER_0;
   c.pin_d0=5;c.pin_d1=18;c.pin_d2=19;c.pin_d3=21;c.pin_d4=36;c.pin_d5=39;c.pin_d6=34;c.pin_d7=35;
   c.pin_xclk=0;c.pin_pclk=22;c.pin_vsync=25;c.pin_href=23;c.pin_sccb_sda=26;c.pin_sccb_scl=27;c.pin_pwdn=32;c.pin_reset=-1;
-  c.xclk_freq_hz=20000000;c.pixel_format=PIXFORMAT_JPEG;
+  c.xclk_freq_hz=CAMERA_XCLK_HZ;c.pixel_format=PIXFORMAT_JPEG;
   // Bo không có PSRAM vẫn chụp được ở QVGA trong DRAM (từ smart_cane) thay vì tắt camera hẳn.
   bool psram=psramFound();
   c.frame_size=psram?FRAMESIZE_VGA:FRAMESIZE_QVGA;c.jpeg_quality=14;c.fb_count=1;
@@ -222,6 +238,8 @@ bool cameraStart(){
 #endif
 }
 
+// Lần cuối server trả lời (bất kỳ mã HTTP nào), để phát hiện Wi-Fi/TCP kẹt khi vẫn báo đã kết nối.
+uint32_t lastServerOk=0;
 // HTTP chỉ ở tác vụ mạng. Vòng đo và cảnh báo cục bộ không đợi máy chủ.
 int requestHttp(const String& method,const String& route,const uint8_t* bytes,size_t length,String& response,const char* type="application/json",uint32_t captured=0){
   if(WiFi.status()!=WL_CONNECTED)return -1;
@@ -237,7 +255,7 @@ int requestHttp(const String& method,const String& route,const uint8_t* bytes,si
   if(captured)http.addHeader("X-Captured-At",String(captured));
   int status=method=="GET"?http.GET():http.sendRequest(method.c_str(),const_cast<uint8_t*>(bytes),length);
   if(status>0){int len=http.getSize();if(len<0||len<=16384)response=http.getString();}
-  http.end();return status;
+  http.end();if(status>0)lastServerOk=millis();return status;
 }
 int jsonRequest(const String& method,const String& route,JsonDocument& doc,String& response){String payload;serializeJson(doc,payload);return requestHttp(method,route,(const uint8_t*)payload.c_str(),payload.length(),response);}
 void ack(const char* id,const char* result){JsonDocument doc;doc["result"]=result;String response;jsonRequest("POST",String("/api/v1/commands/")+id+"/ack",doc,response);}
@@ -300,8 +318,9 @@ void pollCommands(){
       uint32_t captured=validEpoch();
       if(periodic&&!snapshot().periodic){esp_camera_fb_return(frame);ack(id,"privacy_off");continue;}
       const char* eid=command["event_id"]|"";String result;
-      int status=requestHttp("POST",String("/api/v1/events/")+eid+"/image",frame->buf,frame->len,result,"image/jpeg",captured);
-      LOGF("[camera] %s %u bytes -> HTTP %d\n",command["reason"]|"?",(unsigned)frame->len,status);
+      uint32_t sendStart=millis();int status=requestHttp("POST",String("/api/v1/events/")+eid+"/image",frame->buf,frame->len,result,"image/jpeg",captured);
+      // In thời gian gửi và RSSI: gửi chậm + RSSI dưới khoảng -75 dBm là do sóng Wi-Fi yếu.
+      LOGF("[camera] %s %u bytes -> HTTP %d (%lu ms, RSSI %d dBm)\n",command["reason"]|"?",(unsigned)frame->len,status,(unsigned long)(millis()-sendStart),(int)WiFi.RSSI());
       esp_camera_fb_return(frame);
       if(status>=200&&status<300)ack(id,"done");
       else if(status==409)ack(id,"privacy_off");
@@ -317,7 +336,16 @@ void networkTask(void*){
   bool savedPrivacy=snapshot().periodic;[[maybe_unused]] bool findRequestPending=false;
   WiFi.mode(WIFI_STA);WiFi.setSleep(false);WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
   configTime(0,0,"pool.ntp.org","time.google.com");
+#if NETWORK_WDT_S
+  // Watchdog cho tác vụ mạng: mỗi vòng phải quay lại trong NETWORK_WDT_S giây, nếu không chip tự khởi động lại.
+  esp_task_wdt_config_t wdt{};wdt.timeout_ms=NETWORK_WDT_S*1000;wdt.idle_core_mask=1;wdt.trigger_panic=true;
+  if(esp_task_wdt_reconfigure(&wdt)!=ESP_OK)esp_task_wdt_init(&wdt);
+  esp_task_wdt_add(nullptr);
+#endif
   for(;;){
+#if NETWORK_WDT_S
+    esp_task_wdt_reset();
+#endif
     LocalEvent e;bool dirty=false;while(xQueueReceive(eventQueue,&e,0)==pdTRUE){
 #if APP_ROLE == 1
       // Tìm gậy là lệnh tạm thời, không lưu ngoại tuyến để tránh còi chạy muộn.
@@ -330,6 +358,10 @@ void networkTask(void*){
     if(dirty)savePending();
     bool periodic=snapshot().periodic;if(periodic!=savedPrivacy){prefs.putBool("periodic",periodic);savedPrivacy=periodic;}
     uint32_t now=millis();
+#if OFFLINE_RESTART_MIN
+    // Sự kiện chờ gửi đã lưu trong prefs nên khởi động lại không mất SOS.
+    if(now-lastServerOk>OFFLINE_RESTART_MIN*60000UL){LOGF("[wdt] %d phut khong goi duoc server, khoi dong lai\n",(int)OFFLINE_RESTART_MIN);delay(200);ESP.restart();}
+#endif
 #if APP_ROLE == 1
     if(findRequestPending&&now-findAt>20000)findRequestPending=false;
     // Camera lỗi lúc khởi động (cáp, nguồn yếu) được thử lại mỗi 15 s thay vì tắt đến khi reset.
@@ -377,8 +409,9 @@ void networkTask(void*){
       }
       // Lỗi mạng/5xx: giữ nguyên thứ tự và thử lại sau 1,5 s.
     }
-    if(now-stateAt>=3000){stateAt=now;sendState();}
-    if(now-pollAt>=2000){pollAt=now;pollCommands();}
+    // Hỏi lệnh trước gửi trạng thái: lệnh chụp không phải xếp sau một request trạng thái chậm.
+    if(now-pollAt>=POLL_INTERVAL_MS){pollAt=now;pollCommands();}
+    if(now-stateAt>=STATE_INTERVAL_MS){stateAt=now;sendState();}
     vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
@@ -388,6 +421,8 @@ void setup(){
   Serial.begin(115200);
 #endif
   LOGF("\n[boot] Dong Hanh role=%s%s\n",ROLE,CAMERA_ONLY?" (camera only)":"");
+  // 1=bat nguon, 3=ESP.restart, 4=panic, 6=watchdog task, 9=sut ap: biết lần trước vì sao bo khởi động lại.
+  LOGF("[boot] ly do reset truoc: %d\n",(int)esp_reset_reason());
   // In số chân thật đang dùng để đối chiếu với dây trên breadboard (biết ngay có nạp nhầm bản cũ không).
   if(TRIG>=0||SOS>=0)LOGF("[boot] chan: TRIG=%d ECHO=%d | SOS=%d (giu %ums) PRIVACY=%d DROP=%d STOP=%d | LED=%d COI1=%d COI2=%d\n",TRIG,ECHO,SOS,(unsigned)SOS_HOLD_MS,PRIVACY,DROP,STOP,MOTOR,BUZZER,PIEZO);
   bootNonce=esp_random();
