@@ -8,7 +8,7 @@ Base path `/api/v1`. Trừ `/health` và file giao diện tĩnh, API cần `Auth
 - `GET /api/v1/session`: mọi role hợp lệ; trả role, mode, camera_source, server_time.
 - `POST /api/v1/state`: test/chest/cane/phone; heartbeat với distance_cm hoặc null, sensor_valid, periodic_enabled, drop_alarm, sos_alarm, simulated, camera_ready, imu_ready, queue_dropped, uptime_s. Role xác định từ token, không tin device_id do client gửi.
 - `POST /api/v1/events`: test/chest/cane/phone theo mode/quyền; `event_id`, `kind`, `occurred_at` hoặc null, `clock_synced`, `message`. Kind phía bo: sos/drop/privacy/test; phone chỉ sos. Nguồn được gửi theo mode: test/duo → bo `test`; final → `chest`, `cane`. ID giống role+kind được chống trùng. Sự kiện periodic chỉ do máy chủ tạo.
-- `GET /api/v1/commands`: thiết bị/phone lấy lệnh của chính role. Có thêm `road_alert_ms` (0–20000): chỉ khác 0 với test/chest khi `WEARER_AI_ALERT=1` và ảnh mới nhất (chụp < 20 s) có `risk` là possible_road/possible_water. Lease12s, tối đa4 lệnh/lần; retry khi chưa ACK và chưa hết hạn. Capture SOS TTL90s; periodic TTL30s; tìm gậy TTL20s.
+- `GET /api/v1/commands`: thiết bị/phone lấy lệnh của chính role. Có thêm `road_alert_ms` (0–20000): chỉ khác 0 với test/chest khi `WEARER_AI_ALERT=1` và ảnh mới nhất (chụp < 20 s) có `risk` là possible_road/possible_water. Lease12s, tối đa4 lệnh/lần; retry khi chưa ACK và chưa hết hạn. Capture SOS TTL90s; manual TTL60s; periodic TTL30s; tìm gậy TTL20s.
 - `POST /api/v1/commands/{id}/ack`: cùng role đích; `result=done|failed|privacy_off|camera_unavailable`. Capture chưa upload ảnh không được ACK done.
 - `POST /api/v1/events/{id}/image`: nguồn camera đúng mode, `Content-Type:image/jpeg`, header `X-Captured-At` Unix seconds nếu đồng hồ đã đồng bộ; body là JPEG thô. Cần yêu cầu chụp còn hiệu lực. Retry cùng event_id không ghi đè ảnh đã nhận.
 - `GET /api/v1/events/{id}/image`: caregiver; JPEG riêng tư. Giao diện fetch bằng header rồi tạo blob URL, không lộ khóa trong URL ảnh.
@@ -19,7 +19,7 @@ Base path `/api/v1`. Trừ `/health` và file giao diện tĩnh, API cần `Auth
 - `POST /api/v1/push/subscriptions` / `POST /api/v1/push/unsubscribe`: caregiver; đăng ký/hủy nhận thông báo đẩy. Chỉ nhận endpoint HTTPS của dịch vụ push trình duyệt (Google, Mozilla, Apple, Microsoft); tối đa 20 thiết bị.
 - `PUT /api/v1/settings`: caregiver; `periodic_enabled` boolean, `interval_s` 15–3600. Không thay được trạng thái riêng tư cục bộ của chest/test.
 - `POST /api/v1/events/{id}/ack`: caregiver, xác nhận đã xem SOS; không có nghĩa cứu trợ đã xong, không điều khiển còi.
-- `POST /api/v1/capture`: caregiver; người nhà yêu cầu chụp ngay (kind `manual`). Trả 409 nếu người đeo đang tắt ảnh hoặc thiết bị điều khiển mất heartbeat; nếu camera đang có yêu cầu chụp thì trả lại yêu cầu đó với `duplicate=true`. TTL 30 s.
+- `POST /api/v1/capture`: caregiver; người nhà yêu cầu chụp ngay (kind `manual`). Trả 409 nếu người đeo đang tắt ảnh hoặc thiết bị điều khiển mất heartbeat; nếu camera đang có yêu cầu chụp thì trả lại yêu cầu đó với `duplicate=true`. TTL 60 s.
 - `POST /api/v1/find-cane`: caregiver, phone hoặc remote (nút cầm tay, khi `REMOTE_TOKEN` được đặt); xếp lệnh tìm cho test trong mode test, cane trong mode final. Token chest cũng được phép gọi endpoint này khi `PROJECT_MODE=final`; đây là luồng nút tìm gậy vật lý trên ngực. Chest bị từ chối ở mode test.
 - `POST /api/v1/location`: phone; latitude, longitude, accuracy mét, captured_at. Không chấp nhận tọa độ ngoài miền; bản tin cũ hơn không thay tọa độ mới hơn.
 

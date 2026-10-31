@@ -211,7 +211,8 @@ def add_event(c, eid, source, kind, occurred=None, synced=False, details='', cap
     context = json.dumps(sos_context(c, now, occurred, synced)) if kind == 'sos' else None
     c.execute('INSERT INTO events(id,source,kind,received_at,occurred_at,clock_synced,details,image_status,ai,context) VALUES(?,?,?,?,?,?,?,?,?,?)',
               (eid,source,kind,now,occurred,int(synced),details,'pending' if capture else 'not_requested',json.dumps({'status':'waiting' if capture else 'not_requested','risk':'unknown'}),context))
-    if capture: add_command(c,CAMERA,'capture',eid,90 if kind=='sos' else 30)
+    # Người nhà bấm chụp được 60 s: cam Wi-Fi yếu có thể mất 10-20 s mới gửi xong một ảnh.
+    if capture: add_command(c,CAMERA,'capture',eid,90 if kind=='sos' else 60 if kind=='manual' else 30)
     if kind in ('sos', 'drop'): add_message(c, eid, kind)
 
 def capture_permitted(c, now):
