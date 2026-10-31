@@ -10,6 +10,8 @@ const timeText = t => t ? new Date(t*1000).toLocaleString('vi-VN') : 'Chưa có 
 // Giờ server trừ giờ máy này (giây). Tuổi dữ liệu tính theo giờ server: máy xem lệch giờ (vd. nhanh 1 phút)
 // không còn làm mọi thiết bị bị coi là mất tín hiệu và số liệu trống.
 let clockOffset = 0;
+// Thiết bị gửi trạng thái mỗi 3 s nhưng qua Cloudflare có lúc hụt vài nhịp liền (~25 s); 20 s cũ làm dashboard chập chờn trống.
+const ONLINE_S = 40;
 const age = t => t ? Math.max(0, Math.floor(Date.now()/1000+clockOffset-t)) : Infinity;
 const ageText = t => {const s=age(t);return !Number.isFinite(s)?'chưa có':s<60?`${s} giây trước`:s<3600?`${Math.floor(s/60)} phút trước`:`${Math.floor(s/3600)} giờ trước`;};
 const scene = () => `<div class="demo-scene"><svg viewBox="0 0 800 480" role="img" aria-label="Hình vẽ minh họa lối đi, không phải ảnh từ thiết bị"><rect width="800" height="480" fill="#dce8d9"/><rect y="0" width="800" height="245" fill="#d5e3df"/><circle cx="650" cy="88" r="39" fill="#f5edd0"/><path d="M0 240L160 146 300 250 468 168 620 220 800 157V330H0Z" fill="#bdcfb6"/><path d="M310 230H458L740 480H50Z" fill="#d8d5c1"/><path d="M340 230H430L568 480H204Z" fill="#ede8d7"/><path d="M387 240L391 480" stroke="#d7d2bf" stroke-width="2"/><path d="M290 313H488M247 383H530" stroke="#d5ceba" stroke-width="2"/><path d="M0 290Q135 242 304 260L204 480H0Z" fill="#8fa77d"/><path d="M454 247Q626 238 800 292V480H568Z" fill="#a1b98d"/><g fill="#638168"><ellipse cx="119" cy="171" rx="70" ry="103"/><ellipse cx="697" cy="188" rx="65" ry="90"/></g><path d="M119 193V368M697 208V379" stroke="#73806a" stroke-width="12"/><g fill="#b3c895"><ellipse cx="48" cy="341" rx="66" ry="33"/><ellipse cx="766" cy="358" rx="92" ry="39"/></g><path d="M601 293H680V310H601Z" fill="#a69d7b"/><path d="M615 309V340M668 309V340" stroke="#888b71" stroke-width="5"/><path d="M26 27H58M26 27V59M774 27H742M774 27V59M26 453H58M26 453V421M774 453H742M774 453V421" stroke="#fff8e7" stroke-width="2" fill="none"/></svg><span class="scene-stamp">HÌNH MINH HỌA · KHÔNG PHẢI CAMERA</span><span class="scene-label">Kết nối máy chủ để xem ảnh thật từ thiết bị.</span></div>`;
@@ -53,11 +55,11 @@ function render(){
   if($('demoSos'))$('demoSos').onclick=simulateSos;
   $('syncBadge').textContent=demo?'Dữ liệu minh họa':failed?'Máy chủ mất kết nối':'Đã đồng bộ';
   $('syncBadge').className='badge '+(failed?'danger':demo?'neutral':'good');
-  const online=data.devices.filter(d=>(demo||age(d.last_seen)<20)&&isLive);
+  const online=data.devices.filter(d=>(demo||age(d.last_seen)<ONLINE_S)&&isLive);
   $('deviceCount').textContent=demo?'2 / 2':`${online.length} / ${data.devices.length}`;
-  $('deviceHint').textContent=demo?'Hai nguồn giả lập':failed?'Không xác định trạng thái hiện tại':'Có tín hiệu trong 20 giây gần nhất';
+  $('deviceHint').textContent=demo?'Hai nguồn giả lập':failed?'Không xác định trạng thái hiện tại':`Có tín hiệu trong ${ONLINE_S} giây gần nhất`;
   const device=data.devices.find(d=>d.id===(data.mode==='final'?'chest':'test'));// duo/test: ESP32 thử giữ cảm biến và nút riêng tư
-  const fresh=device&&(demo||isLive&&age(device.last_seen)<20);
+  const fresh=device&&(demo||isLive&&age(device.last_seen)<ONLINE_S);
   const valid=fresh&&device.state.sensor_valid&&device.state.distance_cm!=null;
   $('distance').innerHTML=valid?`${Math.round(device.state.distance_cm)} <em>cm</em>`:'— <em>cm</em>';
   $('distanceHint').textContent=!valid?'Không xác định · kiểm tra cảm biến':device.state.simulated?'Khoảng cách đang được giả lập':device.state.distance_cm<40?'Vật cản rất gần':device.state.distance_cm<120?'Trong ngưỡng cảnh báo':'Ngoài ngưỡng cảnh báo đã đặt';
@@ -86,7 +88,7 @@ function render(){
   $('mapLink').hidden=!pos;if(pos)$('mapLink').href=`https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}`;
   $('recentFeed').innerHTML=data.events.length?data.events.slice(0,5).map(e=>`<div class="feed-item" tabindex="0" role="button" data-event="${esc(e.id)}"><span class="event-dot ${esc(e.kind)}">${e.kind==='sos'?'!':e.kind==='drop'?'⌁':'▧'}</span><div><h3>${esc(names[e.kind]||e.kind)}</h3><p>${esc(sources[e.source]||e.source)}${e.demo?' · Minh họa':''} · ${e.has_image?'Có ảnh':imageStatus(e.image_status)}</p></div><time>${esc(timeText(e.received_at))}</time><span class="arrow">↗</span></div>`).join(''):'<div class="empty-state">Chưa có sự kiện. Bấm SOS trên thiết bị để thử kết nối.</div>';
   bindEvents($('recentFeed'));
-  $('deviceList').innerHTML=data.devices.map(d=>`<div class="device-item"><span>${esc(sources[d.id]||d.id)}</span><span class="badge ${isLive&&age(d.last_seen)<20?'good':'neutral'}">${demo?'Giả lập':isLive&&age(d.last_seen)<20?'Có tín hiệu':'Mất tín hiệu'}</span></div>`).join('')||'<p>Chưa có thiết bị.</p>';
+  $('deviceList').innerHTML=data.devices.map(d=>`<div class="device-item"><span>${esc(sources[d.id]||d.id)}</span><span class="badge ${isLive&&age(d.last_seen)<ONLINE_S?'good':'neutral'}">${demo?'Giả lập':isLive&&age(d.last_seen)<ONLINE_S?'Có tín hiệu':'Mất tín hiệu'}</span></div>`).join('')||'<p>Chưa có thiết bị.</p>';
   $('connectionInfo').textContent=demo?'Đang xem dữ liệu minh họa.':`${session?.url||location.origin} · ${session?.role||''}`;
   if(firstLoad){$('periodicToggle').checked=data.settings.periodic_enabled;$('interval').value=data.settings.interval_s;}
   // Cùng tag với thông báo đẩy (`<event>:sos`) nên không hiện trùng khi máy đã đăng ký push.

@@ -62,7 +62,7 @@ class APITest(unittest.TestCase):
         self.state(True);self.assertEqual(self.commands()[0]['reason'],'periodic')
     def test_stale_controller_does_not_enable_periodic(self):
         self.state()
-        with module.db() as c:c.execute('UPDATE devices SET last_seen=?',(time.time()-30,))
+        with module.db() as c:c.execute('UPDATE devices SET last_seen=?',(time.time()-60,))
         self.assertEqual(self.commands(),[])
     def test_remote_setting_cannot_override_local_off(self):
         self.state(False)

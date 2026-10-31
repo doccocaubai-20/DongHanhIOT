@@ -51,6 +51,8 @@ DB = DATA / 'donghanh.sqlite3'
 RETENTION = max(1, int(os.getenv('RETENTION_DAYS', '7'))) * 86400
 CAMERA = 'phone' if MODE == 'test' else 'chest'
 CONTROLLER = 'chest' if MODE == 'final' else 'test'
+# Bo điều khiển coi là còn kết nối nếu gửi trạng thái trong 40 s (khớp web): qua Cloudflare có lúc hụt vài nhịp liền.
+HEARTBEAT_S = 40
 FIND_TARGET = 'cane' if MODE == 'final' else 'test'
 # Role được gửi sự kiện (SOS/rơi/riêng tư) trong từng chế độ; phone luôn được gửi SOS.
 EVENT_SOURCES = {'test': ('test',), 'duo': ('test',), 'final': ('chest', 'cane')}[MODE]
@@ -219,7 +221,7 @@ def capture_permitted(c, now):
     """Ảnh không phải SOS chỉ được chụp khi người đeo bật quyền cục bộ và người nhà bật cài đặt."""
     controller=c.execute('SELECT * FROM devices WHERE id=?',(CONTROLLER,)).fetchone()
     settings=c.execute('SELECT periodic FROM settings WHERE id=1').fetchone()
-    return bool(controller and now-controller['last_seen']<20 and json.loads(controller['state']).get('periodic_enabled',False) and settings['periodic'])
+    return bool(controller and now-controller['last_seen']<HEARTBEAT_S and json.loads(controller['state']).get('periodic_enabled',False) and settings['periodic'])
 
 def wearer_alert_ms(c, now):
     if not WEARER_AI_ALERT: return 0
