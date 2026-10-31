@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cứu Hộ Khẩn Cấp - Đồng Hành</title>
+  <title>Cứu Hộ Khẩn Cấp - Gậy Thông Minh Đồng Hành</title>
   <link rel="icon" href="/icon-192.png">
   <style>
     :root {
@@ -11,32 +11,44 @@
       --primary-light: #2c6e58;
       --danger: #d93829;
       --danger-dark: #b5281b;
+      --gps-color: #0b7285;
+      --gps-bg: #e3fafc;
       --bg: #f4f7f5;
       --card: #ffffff;
       --text: #222222;
-      --subtext: #666666;
+      --subtext: #555555;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
     .container { width: 100%; max-width: 480px; margin: 0 auto; }
-    .badge { display: inline-block; background: #ffebeb; color: var(--danger); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .card { background: var(--card); border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 16px; border: 1px solid #e2e8e5; }
-    .header { text-align: center; margin-bottom: 20px; }
+    .badge { display: inline-block; background: #ffebeb; color: var(--danger); font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 16px; border: 1px solid #e2e8e5; }
+    .header { text-align: center; margin-bottom: 16px; }
     .header h1 { font-size: 22px; color: var(--primary); margin-bottom: 6px; }
-    .header p { font-size: 14px; color: var(--subtext); line-height: 1.4; }
-    .call-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 700; text-decoration: none; margin-bottom: 12px; transition: transform 0.1s, background 0.2s; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+    .header p { font-size: 14px; color: var(--subtext); line-height: 1.5; }
+    
+    /* GPS Card */
+    .gps-card { background: var(--gps-bg); border: 2px solid #99e9f2; border-radius: 14px; padding: 16px; margin-bottom: 16px; text-align: center; }
+    .gps-title { font-size: 15px; font-weight: 700; color: var(--gps-color); margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .gps-desc { font-size: 13px; color: #495057; margin-bottom: 12px; line-height: 1.4; }
+    .btn-gps-main { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; background: var(--gps-color); color: #ffffff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform 0.1s, background 0.2s; box-shadow: 0 3px 8px rgba(11, 114, 133, 0.25); }
+    .btn-gps-main:active { transform: scale(0.98); background: #0c8599; }
+    .status-gps { font-size: 13px; margin-top: 10px; min-height: 20px; line-height: 1.4; font-weight: 600; }
+    .maps-link { display: inline-block; margin-top: 8px; font-size: 13px; color: #1971c2; text-decoration: underline; font-weight: 600; }
+
+    /* Call Buttons */
+    .call-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px; border-radius: 12px; font-size: 17px; font-weight: 700; text-decoration: none; margin-bottom: 12px; transition: transform 0.1s, background 0.2s; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
     .call-btn:active { transform: scale(0.98); }
     .call-primary { background: var(--danger); color: #ffffff; }
     .call-primary:hover { background: var(--danger-dark); }
     .call-secondary { background: var(--primary); color: #ffffff; }
     .call-secondary:hover { background: var(--primary-light); }
+
     .info-box { background: #f9fbf9; border-radius: 10px; padding: 14px; margin-top: 14px; border-left: 4px solid var(--primary); }
     .info-box h3 { font-size: 14px; color: var(--primary); margin-bottom: 6px; }
-    .info-box p { font-size: 13px; color: #444; line-height: 1.5; }
-    .btn-gps { width: 100%; padding: 12px; background: #eef5f1; color: var(--primary); border: 1px dashed var(--primary); border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px; }
-    .btn-gps:active { background: #ddece3; }
-    .status-gps { font-size: 12px; color: #666; text-align: center; margin-top: 6px; min-height: 18px; }
-    .footer { text-align: center; font-size: 12px; color: #888; margin-top: auto; padding-top: 20px; }
+    .info-box p { font-size: 13px; color: #444; line-height: 1.5; margin-bottom: 4px; }
+    
+    .footer { text-align: center; font-size: 12px; color: #888; margin-top: auto; padding-top: 16px; }
   </style>
 </head>
 <body>
@@ -47,68 +59,118 @@
       <p>Người mang thiết bị này là <b>người khiếm thị / người già</b> đang sử dụng gậy thông minh Đồng Hành.</p>
     </div>
 
+    <!-- KHỐI CHIA SẺ VỊ TRÍ GPS TỰ ĐỘNG -->
+    <div class="gps-card">
+      <div class="gps-title">
+        <span>📍 CHIA SẺ VỊ TRÍ CHO GIA ĐÌNH</span>
+      </div>
+      <p class="gps-desc">Bấm nút bên dưới để gửi tọa độ GPS hiện tại về máy chủ cho gia đình biết vị trí chính xác đến đón:</p>
+      
+      <button class="btn-gps-main" id="sendGpsBtn">
+        <span>📍 GỬI VỊ TRÍ HIỆN TẠI NGAY</span>
+      </button>
+
+      <div class="status-gps" id="gpsStatus"></div>
+      <a href="#" target="_blank" class="maps-link" id="mapsLink" style="display: none;">🗺️ Mở vị trí này trên Google Maps</a>
+    </div>
+
+    <!-- KHỐI GỌI ĐIỆN THOẠI TRỰC TIẾP -->
     <div class="card">
-      <p style="font-size: 13px; color: #666; margin-bottom: 12px; text-align: center;">Chạm vào nút bên dưới để gọi trực tiếp cho người thân:</p>
+      <p style="font-size: 14px; color: #444; margin-bottom: 12px; text-align: center; font-weight: 600;">Chạm vào nút để gọi trực tiếp cho người thân:</p>
       
       <a href="tel:0988123456" class="call-btn call-primary" id="btnPhone1">
         📞 GỌI NGƯỜI THÂN: <span id="txtPhone1">0988 123 456</span>
       </a>
 
       <a href="tel:0912345678" class="call-btn call-secondary" id="btnPhone2">
-        📞 GỌI SỐ PHỤ: <span id="txtPhone2">0912 345 678</span>
+        📞 GỌI SỐ DỰ PHÒNG: <span id="txtPhone2">0912 345 678</span>
       </a>
 
       <div class="info-box">
         <h3>Hướng dẫn người giúp đỡ:</h3>
-        <p>• Xin quý vị vui lòng hướng dẫn người mang gậy đứng ở nơi an toàn (trên vỉa hè, dưới bóng mát, tránh xa lòng đường xe cộ).</p>
+        <p>• Xin quý vị vui lòng hướng dẫn người mang gậy đứng ở nơi an toàn (trên vỉa hè, dưới bóng mát, tránh xa làn xe chạy).</p>
         <p>• Bấm gọi cho số điện thoại ở trên để thông báo vị trí hoặc tình trạng của người dùng cho gia đình.</p>
       </div>
-
-      <button class="btn-gps" id="sendGpsBtn">📍 Bấm để chia sẻ vị trí hiện tại cho người nhà</button>
-      <div class="status-gps" id="gpsStatus"></div>
     </div>
 
     <div class="footer">
       <p>Hệ Thống Trợ Giúp Người Khiếm Thị · Dự Án Đồng Hành IoT</p>
-      <p style="margin-top: 4px; font-size: 11px; color: #aaa;">Trang thông tin công cộng · Bảo vệ quyền riêng tư gia đình</p>
+      <p style="margin-top: 4px; font-size: 11px; color: #aaa;">Trang cứu trợ công cộng · Bảo vệ quyền riêng tư gia đình</p>
     </div>
   </div>
 
   <script>
     const sendGpsBtn = document.getElementById('sendGpsBtn');
     const gpsStatus = document.getElementById('gpsStatus');
+    const mapsLink = document.getElementById('mapsLink');
 
-    sendGpsBtn.onclick = function() {
+    async function sendLocation(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const acc = Math.round(pos.coords.accuracy);
+
+      gpsStatus.textContent = 'Đang lưu vị trí lên hệ thống...';
+      gpsStatus.style.color = '#0b7285';
+
+      try {
+        const resp = await fetch('/api/v1/sos/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            latitude: lat,
+            longitude: lon,
+            accuracy: acc,
+            captured_at: Date.now() / 1000
+          })
+        });
+
+        if (resp.ok) {
+          gpsStatus.textContent = `✓ Đã gửi tọa độ thành công! (Sai số: ±${acc}m)`;
+          gpsStatus.style.color = '#1b4d3e';
+          mapsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+          mapsLink.style.display = 'inline-block';
+        } else {
+          gpsStatus.textContent = 'Lỗi gửi vị trí lên máy chủ. Bạn vui lòng đọc tên đường khi gọi điện.';
+          gpsStatus.style.color = '#d93829';
+        }
+      } catch(err) {
+        gpsStatus.textContent = 'Lỗi kết nối máy chủ. Bạn vui lòng đọc tên đường khi gọi điện thoại.';
+        gpsStatus.style.color = '#d93829';
+      }
+    }
+
+    function requestLocation() {
       if (!navigator.geolocation) {
         gpsStatus.textContent = 'Trình duyệt của bạn không hỗ trợ định vị GPS.';
+        gpsStatus.style.color = '#d93829';
         return;
       }
-      gpsStatus.textContent = 'Đang lấy vị trí GPS từ điện thoại của bạn...';
+
+      gpsStatus.textContent = 'Đang lấy tọa độ GPS từ thiết bị của bạn...';
+      gpsStatus.style.color = '#0b7285';
+
       navigator.geolocation.getCurrentPosition(
-        async function(pos) {
-          try {
-            const resp = await fetch('/api/v1/location', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                latitude: pos.coords.latitude,
-                longitude: pos.coords.longitude,
-                accuracy: pos.coords.accuracy,
-                captured_at: Date.now() / 1000
-              })
-            });
-            gpsStatus.textContent = '✓ Đã gửi vị trí thành công! Gia đình đã biết tọa độ.';
-            gpsStatus.style.color = '#1b4d3e';
-          } catch(e) {
-            gpsStatus.textContent = 'Lỗi gửi vị trí, xin hãy nói trực tiếp khi gọi điện thoại.';
-          }
-        },
+        sendLocation,
         function(err) {
-          gpsStatus.textContent = 'Chưa thể lấy vị trí. Bạn có thể đọc tên đường khi gọi điện.';
+          if (err.code === 1) {
+            gpsStatus.textContent = 'Bạn đã từ chối cấp quyền vị trí. Vui lòng bật GPS trên trình duyệt để gia đình nhận tọa độ.';
+          } else {
+            gpsStatus.textContent = 'Không thể lấy tín hiệu GPS. Bạn hãy đọc tên đường/mốc địa chỉ khi gọi điện thoại nhé.';
+          }
+          gpsStatus.style.color = '#d93829';
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
-    };
+    }
+
+    sendGpsBtn.onclick = requestLocation;
+
+    // Tự động hỏi quyền vị trí ngay khi trang mở
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        requestLocation();
+      }, 500);
+    });
   </script>
 </body>
 </html>

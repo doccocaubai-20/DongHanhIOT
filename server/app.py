@@ -662,4 +662,13 @@ def emergency_page():
     """Trang công cộng hiển thị số điện thoại cứu hộ khẩn cấp khi quét mã QR trên gậy."""
     return FileResponse(ROOT / 'web' / 'sos.html')
 
+@app.post('/api/v1/sos/location')
+def sos_location(body: Position):
+    """Cập nhật vị trí GPS công cộng từ người quét mã QR cứu hộ khi tìm thấy người khiếm thị."""
+    with lock, db() as c:
+        now = time.time()
+        c.execute('INSERT OR REPLACE INTO location VALUES(1,?,?,?,?,?)',
+                  (body.latitude, body.longitude, body.accuracy, body.captured_at, now))
+    return {'ok': True, 'msg': 'Đã gửi vị trí cứu hộ thành công!'}
+
 app.mount('/',StaticFiles(directory=ROOT/'web',html=True),name='web')

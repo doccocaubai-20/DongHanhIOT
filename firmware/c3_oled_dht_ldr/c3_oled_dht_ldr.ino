@@ -8,8 +8,9 @@
 // ==========================================
 // CẤU HÌNH ĐƯỜNG DẪN CỨU HỘ SOS & THÔNG TIN
 // ==========================================
-// Link cứu hộ Alphanumeric Version 1 (24 ký tự) - vừa vặn 100% trong dải màu xanh
-const char* QR_LINK          = "IOT.CHONGZIAPP.ID.VN/SOS";
+// Link bắt đầu bằng HTTP:// để camera điện thoại nhận diện là LIÊN KẾT WEB (không vào thanh tìm kiếm)
+// Chuẩn Alphanumeric 23 ký tự -> Vừa khít Version 1 (42x42 px), 100% trong dải màu xanh
+const char* QR_LINK          = "HTTP://161.118.211.25/S";
 
 // Thông tin người thân (hiển thị khi bấm nút xem trang liên hệ)
 const char* EMERGENCY_NAME   = "NGUYEN VAN A";
@@ -45,8 +46,9 @@ constexpr int PIN_RGB_R = 1;  // Đỏ (Red) -> GPIO 1 (qua trở)
 constexpr int PIN_RGB_G = 3;  // Xanh lá (Green) -> GPIO 3 (qua trở)
 constexpr int PIN_RGB_B = 4;  // Xanh dương (Blue) -> GPIO 4 (qua trở)
 
-// 6. NÚT BẤM BOOT TRÊN BO
-constexpr int PIN_BUTTON_BOOT = 9;
+// 6. NÚT BẤM CHUYỂN TRANG
+constexpr int PIN_BUTTON_EXT  = 10; // Nút bấm rời to từ bộ kit -> GPIO 10 (nối chân còn lại với GND)
+constexpr int PIN_BUTTON_BOOT = 9;  // Nút BOOT nhỏ tích hợp sẵn trên bo mạch -> GPIO 9 (dự phòng)
 
 // ==========================================
 // BIẾN TOÀN CỤC & QUẢN LÝ DỮ LIỆU
@@ -302,6 +304,7 @@ void setup() {
 
   pinMode(PIN_LDR, INPUT);
   pinMode(PIN_BUTTON_BOOT, INPUT_PULLUP);
+  pinMode(PIN_BUTTON_EXT, INPUT_PULLUP);
 
   // Khởi động I2C cho OLED trên GPIO 6 & 7
   Wire.begin(PIN_SDA, PIN_SCL);
@@ -388,8 +391,8 @@ void loop() {
   // Đổi màu LED RGB liên tục
   updateRgb(now);
 
-  // Bấm nút BOOT (GPIO 9) để đổi trang thủ công: QR -> Cảm biến -> Danh bạ SĐT -> QR
-  if (digitalRead(PIN_BUTTON_BOOT) == LOW) {
+  // Bấm nút chuyển trang thủ công: Hỗ trợ cả Nút Rời Ngoài (GPIO 10) HOẶC Nút BOOT (GPIO 9)
+  if (digitalRead(PIN_BUTTON_EXT) == LOW || digitalRead(PIN_BUTTON_BOOT) == LOW) {
     displayPage = (displayPage + 1) % TOTAL_PAGES;
     pageSwitchTime = now;
     beep(80);
