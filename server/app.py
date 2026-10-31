@@ -656,4 +656,10 @@ async def vifast_tts(text: str = Query(..., min_length=1, max_length=500), speed
         print(f"[ViFastTTS] Lỗi tổng hợp giọng nói: {e}", flush=True)
         raise HTTPException(502, f'Dịch vụ ViFastTts không khả dụng: {e}')
 
+@app.api_route('/sos', methods=['GET', 'HEAD'], response_class=FileResponse)
+@app.api_route('/emergency', methods=['GET', 'HEAD'], response_class=FileResponse)
+def emergency_page():
+    """Trang công cộng hiển thị số điện thoại cứu hộ khẩn cấp khi quét mã QR trên gậy."""
+    return FileResponse(ROOT / 'web' / 'sos.html')
+
 app.mount('/',StaticFiles(directory=ROOT/'web',html=True),name='web')
