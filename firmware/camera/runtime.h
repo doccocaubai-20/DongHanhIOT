@@ -348,7 +348,9 @@ void networkTask(void*){
   [[maybe_unused]] uint32_t findAt=0,findRetryAt=0; // chỉ chest_cam dùng
   bool savedPrivacy=snapshot().periodic;[[maybe_unused]] bool findRequestPending=false;
   WiFi.mode(WIFI_STA);WiFi.setSleep(false);WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
-  configTime(0,0,"pool.ntp.org","time.google.com");
+  // SNTP dùng IP, không dùng tên miền: core 3.3.x có lỗi hostByName() xóa cache DNS không khóa TCPIP,
+  // làm callback DNS đang chờ của SNTP chạy sai luồng và assert "Required to lock TCPIP core" (crash ngay sau khi có Wi-Fi).
+  configTime(0,0,"162.159.200.1","216.239.35.0"); // time.cloudflare.com, time.google.com
 #if NETWORK_WDT_S
   // Watchdog cho tác vụ mạng: mỗi vòng phải quay lại trong NETWORK_WDT_S giây, nếu không chip tự khởi động lại.
   esp_task_wdt_config_t wdt{};wdt.timeout_ms=NETWORK_WDT_S*1000;wdt.idle_core_mask=1;wdt.trigger_panic=true;
