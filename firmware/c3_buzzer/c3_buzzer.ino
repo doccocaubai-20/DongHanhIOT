@@ -10,12 +10,13 @@
 #include "config.h"
 
 // Thời gian chờ tối đa mỗi request HTTP (kết nối + đọc).
-constexpr uint16_t HTTP_TIMEOUT_MS = 4000;
+constexpr uint16_t HTTP_TIMEOUT_MS = 3000;
 constexpr uint32_t ALARM_DURATION_MS = 25000;
 
 // Trạng thái báo động
 volatile bool alarmArmed = false;
 volatile uint32_t alarmUntil = 0;
+volatile uint32_t shortBeepUntil = 0; // Tiếng bíp phản hồi nút bấm tức thì (0ms trễ)
 volatile bool wifiOnline = false;
 volatile uint8_t espNowEvent = 0;
 
@@ -63,10 +64,9 @@ bool alarmActive(uint32_t now) {
   return alarmArmed && (int32_t)(alarmUntil - now) > 0;
 }
 
-void beepShort(int ms = 80) {
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(ms);
-  digitalWrite(BUZZER_PIN, LOW);
+// Kích hoạt tiếng bíp phản hồi nút bấm NGAY LẬP TỨC (chạy trong buzzerTask, 0ms trễ)
+void triggerInstantBeep(uint32_t durationMs = 70) {
+  shortBeepUntil = millis() + durationMs;
 }
 
 // Điều khiển còi trong buzzerTask
@@ -90,7 +90,7 @@ void setBuzzer(bool on) {
 // Cờ báo nút bấm chuyển trang từ buzzerTask sang loop()
 volatile bool btnPageSwitchReq = false;
 
-// Task riêng chạy mỗi 10 ms: nhịp còi, xử lý nút bấm, LED trạng thái bo
+// Task riêng chạy mỗi 10 ms: xử lý nút bấm, phản hồi tiếng bíp tức thì, còi báo động
 void buzzerTask(void*) {
   uint32_t lastBlink = 0;
   uint32_t lastPress = 0;
@@ -99,35 +99,41 @@ void buzzerTask(void*) {
   for (;;) {
     uint32_t now = millis();
 
-    // Kiểm tra bấm nút: Hỗ trợ cả Nút Rời Ngoài (GPIO 10) HOẶC Nút BOOT (GPIO 9)
+    // 1. Kiểm tra bấm nút NGAY LẬP TỨC (Nút rời ngoài GPIO 10 HOẶC Nút BOOT GPIO 9)
     bool btnPressed = (digitalRead(STOP_BUTTON_PIN) == LOW || digitalRead(PIN_BUTTON_EXT) == LOW);
-    if (btnPressed && (now - lastPress >= 300)) {
+    if (btnPressed && (now - lastPress >= 250)) {
       lastPress = now;
 
-      // 1. Nếu còi đang kêu -> Tắt còi tại chỗ ngay lập tức!
+      // Nếu còi đang kêu -> Tắt còi tại chỗ ngay lập tức!
       if (alarmActive(now)) {
         stopAlarm();
         Serial.println("[NUT BAM] Da an nut tat coi tai cho!");
       }
-      // 2. Nếu còi không kêu -> Yêu cầu đổi trang màn hình OLED
+      // Nếu còi không kêu -> KÊU BÍP PHẢN HỒI NGAY & BÁO ĐỔI TRANG MÀN HÌNH TỨC THÌ
       else {
-        btnPageSwitchReq = true;
+        triggerInstantBeep(70);   // Kêu bíp ngay lập tức (không cần đợi mạng)
+        btnPageSwitchReq = true;  // Báo loop() đổi trang màn hình
       }
     }
 
-    if (alarmActive(now)) {
-      // Nhịp đôi còi báo động: Kêu 0-150ms, Nghỉ 150-230ms, Kêu 230-380ms, Nghỉ 380-1000ms
+    // 2. Ưu tiên âm thanh: Tiếng bíp phản hồi nút bấm (0ms trễ)
+    if (now < shortBeepUntil) {
+      setBuzzer(true);
+    }
+    // 3. Âm thanh báo động SOS / Tìm gậy (nhịp đôi)
+    else if (alarmActive(now)) {
       uint32_t cycle = now % 1000;
       bool beep = (cycle < 150) || (cycle >= 230 && cycle < 380);
       setBuzzer(beep);
       digitalWrite(LED_BOARD, beep ? LOW : HIGH);
-    } else {
+    }
+    // 4. Còi tắt, quản lý LED trạng thái bo
+    else {
       alarmArmed = false;
       setBuzzer(false);
       if (wifiOnline) {
         digitalWrite(LED_BOARD, HIGH); // Tắt LED: mạng đã sẵn sàng
       } else if (now - lastBlink >= 300) {
-        // Đang mất kết nối: nhấp nháy LED mỗi 300ms
         lastBlink = now;
         ledState = !ledState;
         digitalWrite(LED_BOARD, ledState ? LOW : HIGH);
@@ -402,6 +408,47 @@ void startEspNow() {
   }
 }
 
+// Task riêng cho Wi-Fi và giao tiếp mạng Server: chạy ngầm hoàn toàn,
+// không làm chặn hay lag nút bấm và màn hình OLED!
+void networkTask(void*) {
+  for (;;) {
+    uint32_t now = millis();
+
+    // 1. Quản lý trạng thái kết nối Wi-Fi
+    if (WiFi.status() == WL_CONNECTED) {
+      if (!wifiOnline) {
+        wifiOnline = true;
+        Serial.printf("[Wi-Fi] KET NOI THANH CONG! IP: %s\n", WiFi.localIP().toString().c_str());
+        startEspNow();
+      }
+    } else {
+      if (wifiOnline) {
+        wifiOnline = false;
+        lastWifiCheck = now;
+      }
+      if (now - lastWifiCheck >= 30000) {
+        lastWifiCheck = now;
+        Serial.println(F("[Wi-Fi] Thu ket noi lai..."));
+        WiFi.reconnect();
+      }
+    }
+
+    // 2. Định kỳ 1 giây hỏi lệnh từ server (chạy ngầm)
+    if (wifiOnline && (now - lastPoll >= 1000)) {
+      lastPoll = now;
+      pollCommands();
+    }
+
+    // 3. Định kỳ 3 giây gửi trạng thái lên server (chạy ngầm)
+    if (wifiOnline && (now - lastState >= 3000)) {
+      lastState = now;
+      sendState();
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+}
+
 // ==========================================
 // SETUP & LOOP
 // ==========================================
@@ -454,14 +501,14 @@ void setup() {
     display.setCursor(18, 44);
     display.println(F("Dang khoi tao..."));
     display.display();
-    delay(1000);
+    delay(500);
   }
 
   // Mặc định hiển thị Màn hình QR Code cứu hộ
   displayPage = 0;
   updateOledDisplay();
 
-  // Khởi chạy buzzerTask độc lập trên FreeRTOS
+  // Khởi chạy buzzerTask (ưu tiên 3) chuyên còi & nút bấm tức thì (0ms lag)
   xTaskCreate(buzzerTask, "buzzer", 3072, nullptr, 3, nullptr);
 
   // 5. Cấu hình Wi-Fi & ESP-NOW
@@ -486,19 +533,21 @@ void setup() {
   Serial.printf("[WiFi] Dang ket noi toi '%s'...\n", WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  beepShort(80);
+  // Khởi chạy networkTask (ưu tiên 1) chuyên HTTP & kết nối mạng ngầm
+  xTaskCreate(networkTask, "network", 4096, nullptr, 1, nullptr);
+
+  triggerInstantBeep(80);
 }
 
 void loop() {
   uint32_t now = millis();
 
-  // 1. Xử lý yêu cầu đổi trang màn hình từ nút bấm (BOOT hoặc Nút rời)
+  // 1. Xử lý yêu cầu đổi trang màn hình từ nút bấm NGAY TỨC THÌ (Độ trễ < 15ms)
   if (btnPageSwitchReq) {
     btnPageSwitchReq = false;
     displayPage = (displayPage + 1) % TOTAL_PAGES;
     pageSwitchTime = now;
-    beepShort(80); // Tiếng bíp phản hồi khi bấm nút
-    updateOledDisplay();
+    updateOledDisplay(); // Chuyển trang màn hình ngay lập tức!
   }
 
   // 2. Tự động quay về Màn hình QR Code Cứu Hộ sau 15 giây không bấm nút
@@ -514,45 +563,12 @@ void loop() {
     updateOledDisplay();
   }
 
-  // 4. Log lệnh ESP-NOW vừa nhận
+  // 4. Cập nhật OLED khi có sự kiện ESP-NOW khẩn cấp
   uint8_t evt = espNowEvent;
   if (evt) {
     espNowEvent = 0;
     Serial.println(evt == 1 ? ">>> [ESP-NOW] Kich hoat coi!" : ">>> [ESP-NOW] Tat coi!");
     updateOledDisplay();
-  }
-
-  // 5. Quản lý trạng thái kết nối Wi-Fi
-  if (WiFi.status() == WL_CONNECTED) {
-    if (!wifiOnline) {
-      wifiOnline = true;
-      Serial.printf("[Wi-Fi] KET NOI THANH CONG! IP: %s\n", WiFi.localIP().toString().c_str());
-      startEspNow();
-      updateOledDisplay();
-    }
-  } else {
-    if (wifiOnline) {
-      wifiOnline = false;
-      lastWifiCheck = now;
-      updateOledDisplay();
-    }
-    if (now - lastWifiCheck >= 30000) {
-      lastWifiCheck = now;
-      Serial.println(F("[Wi-Fi] Thu ket noi lai..."));
-      WiFi.reconnect();
-    }
-  }
-
-  // 6. Định kỳ 1 giây hỏi lệnh từ server
-  if (now - lastPoll >= 1000) {
-    lastPoll = now;
-    pollCommands();
-  }
-
-  // 7. Định kỳ 3 giây gửi trạng thái lên server
-  if (now - lastState >= 3000) {
-    lastState = now;
-    sendState();
   }
 
   delay(10);
