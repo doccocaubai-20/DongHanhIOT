@@ -1,56 +1,463 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#123e3b"><title>Đồng Hành — Kết nối để an tâm</title>
-  <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0F5257">
+  <title>Đồng Hành — Giám Sát & Hỗ Trợ Người Khiếm Thị</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
 <aside class="sidebar">
-  <a class="brand" href="#overview"><span class="brandmark">đ</span><span>đồng hành<small>KẾT NỐI ĐỂ AN TÂM</small></span></a>
-  <div class="workspace"><span class="avatar">GĐ</span><div>Không gian gia đình<small>Đồ án hỗ trợ di chuyển</small></div></div>
-  <div class="nav-label">THEO DÕI</div>
-  <nav aria-label="Điều hướng chính">
-    <button data-page="overview" class="nav active"><span>◫</span>Tổng quan</button>
-    <button data-page="messages" class="nav"><span>✉</span>Tin nhắn<b id="msgBadge" class="nav-badge" hidden>0</b></button><button data-page="history" class="nav"><span>◷</span>Nhật ký hình ảnh</button>
-    <button data-page="phone" class="nav"><span>▯</span>Điện thoại đồng hành</button>
-    <button data-page="settings" class="nav"><span>⚙</span>Kết nối & cài đặt</button>
-    <button data-page="guide" class="nav"><span>▤</span>Hướng dẫn nhanh</button>
+  <a class="brand" href="#overview">
+    <div class="brand-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2a4 4 0 0 0-4 4v6h8V6a4 4 0 0 0-4-4z"/></svg>
+    </div>
+    <div class="brand-text">
+      <span class="brand-name">ĐỒNG HÀNH</span>
+      <span class="brand-tag">HỆ THỐNG IOT HỖ TRỢ</span>
+    </div>
+  </a>
+
+  <div class="sidebar-section-title">CHỨC NĂNG CHÍNH</div>
+  <nav class="sidebar-nav" aria-label="Điều hướng chính">
+    <button data-page="overview" class="nav active">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      <span>Tổng quan</span>
+    </button>
+    <button data-page="messages" class="nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span>Hộp thông báo</span>
+      <b id="msgBadge" class="nav-badge" hidden>0</b>
+    </button>
+    <button data-page="history" class="nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      <span>Nhật ký ảnh</span>
+    </button>
+    <button data-page="phone" class="nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+      <span>Nút & GPS di động</span>
+    </button>
+    <button data-page="settings" class="nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>Cấu hình thiết bị</span>
+    </button>
+    <button data-page="guide" class="nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+      <span>Tài liệu lắp ráp</span>
+    </button>
   </nav>
-  <div class="side-note"><span class="small-icon">♡</span><strong>Mỗi bước đi,<br>luôn có kết nối.</strong><p>Ảnh và thông tin giúp người thân hiểu tình huống từ xa.</p></div>
-  <div class="side-foot"><span class="dot"></span>Đồng Hành / Student project <span>01</span></div>
+
+  <div class="sidebar-status-box">
+    <div class="status-indicator">
+      <span class="pulse-dot"></span>
+      <span class="status-title">Hệ Thống Sẵn Sàng</span>
+    </div>
+    <p class="status-desc">Nguyên mẫu giám sát Duo (Bo ngực & Gậy C3).</p>
+  </div>
+
+  <div class="sidebar-footer">
+    <span>ĐỒNG HÀNH · ĐỒ ÁN IOT 2026</span>
+  </div>
 </aside>
+
 <div class="shell">
-  <header class="topbar"><span class="breadcrumb">Gia đình <span>/</span> <b id="pageName">Tổng quan</b></span><div class="top-actions"><span id="clock"></span><button id="voiceToggle" class="button small secondary">🔊 Giọng đọc: ViFast</button><button id="connectBtn" class="button small">Kết nối máy chủ</button></div></header>
-  <div id="modeBanner" class="mode-banner">BẢN TRẢI NGHIỆM <span>Dữ liệu minh họa · Chưa kết nối thiết bị</span><button id="demoSos">Thử tình huống SOS ↗</button></div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="breadcrumb">Bảng Điều Khiển <span class="sep">/</span> <b id="pageName">Tổng quan</b></span>
+    </div>
+    <div class="top-actions">
+      <div id="clock" class="digital-clock">--:--:--</div>
+      <button id="voiceToggle" class="button small secondary">🔊 Giọng đọc: ViFast</button>
+      <button id="connectBtn" class="button small">Kết nối máy chủ</button>
+    </div>
+  </header>
+
+  <div id="modeBanner" class="mode-banner">
+    BẢN TRẢI NGHIỆM <span>Dữ liệu minh họa · Chưa kết nối thiết bị</span>
+    <button id="demoSos">Thử tình huống SOS ↗</button>
+  </div>
+
   <main>
+    <!-- PAGE: OVERVIEW -->
     <section id="overview" class="page active">
-      <div class="heading"><div><div class="eyebrow">Ở GẦN NHAU, DÙ CÁCH XA</div><h1>Một góc nhìn để an tâm.</h1><p>Theo dõi những cập nhật gần nhất từ người thân.</p></div><span id="syncBadge" class="badge neutral">Chế độ minh họa</span></div>
-      <div id="sosBanner" class="sos-banner" hidden></div>
-      <div class="stats">
-        <article class="stat"><div><span class="label">Thiết bị</span><span class="stat-icon">⌁</span></div><strong id="deviceCount">—</strong><small id="deviceHint">Chưa nhận dữ liệu</small></article>
-        <article class="stat"><div><span class="label">Khoảng cách phía trước</span><span class="stat-icon">↔</span></div><strong id="distance">— <em>cm</em></strong><small id="distanceHint">Chưa có phép đo</small></article>
-        <article class="stat"><div><span class="label">Ảnh định kỳ</span><span class="stat-icon">◉</span></div><strong id="periodicState">—</strong><small id="periodicHint">Quyền riêng tư do người đeo kiểm soát</small></article>
-        <article class="stat"><div><span class="label">SOS cần xem</span><span class="stat-icon coral">!</span></div><strong id="sosCount">0</strong><small id="sosHint">Trong 100 sự kiện gần nhất</small></article>
+      <div class="heading">
+        <div>
+          <h1>Bảng Giám Sát Thời Gian Thực</h1>
+          <p>Dữ liệu cảm biến, trạng thái khẩn cấp và hình ảnh từ thiết bị đeo ngực.</p>
+        </div>
+        <span id="syncBadge" class="badge neutral">Chế độ minh họa</span>
       </div>
+
+      <div id="sosBanner" class="sos-banner" hidden></div>
+
+      <div class="stats">
+        <article class="stat">
+          <div class="stat-top">
+            <span class="label">Trạng thái kết nối</span>
+            <span class="stat-badge-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            </span>
+          </div>
+          <strong id="deviceCount">—</strong>
+          <small id="deviceHint">Chưa nhận dữ liệu</small>
+        </article>
+
+        <article class="stat">
+          <div class="stat-top">
+            <span class="label">Khoảng cách vật cản</span>
+            <span class="stat-badge-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5-5"/></svg>
+            </span>
+          </div>
+          <strong id="distance">— <em>cm</em></strong>
+          <small id="distanceHint">Chưa có phép đo</small>
+        </article>
+
+        <article class="stat">
+          <div class="stat-top">
+            <span class="label">Chế độ Camera ngực</span>
+            <span class="stat-badge-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            </span>
+          </div>
+          <strong id="periodicState">—</strong>
+          <small id="periodicHint">Quyền riêng tư do người đeo kiểm soát</small>
+        </article>
+
+        <article class="stat danger-stat">
+          <div class="stat-top">
+            <span class="label">Cảnh báo SOS cần xem</span>
+            <span class="stat-badge-icon danger-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+          </div>
+          <strong id="sosCount">0</strong>
+          <small id="sosHint">Trong 100 sự kiện gần nhất</small>
+        </article>
+      </div>
+
       <div class="main-grid">
-        <article class="panel camera-panel"><div class="panel-head"><div><h2>Góc nhìn gần nhất</h2><p id="imageSub">Ảnh gửi từ camera</p></div><span class="badge neutral" id="imageType">Chưa có ảnh</span></div><div id="heroImage" class="hero-image"></div><div class="image-caption"><span id="imageTime">Chưa có thời gian chụp</span><button id="imageDetail" class="text-button">Xem chi tiết ↗</button></div><div class="ai-strip"><span class="ai-icon">✦</span><div><strong id="aiTitle">Phân tích AI</strong><p id="aiSummary">Chưa cài mô hình nhận diện.</p></div><span class="badge neutral" id="aiStatus">Chưa cấu hình</span><button id="speakAiBtn" class="button small" style="margin-left:auto;align-self:center" title="Nghe đọc kết quả AI bằng tiếng Việt">🔊 Nghe đọc</button></div></article>
+        <!-- Khối Camera & Phân tích thị giác -->
+        <article class="panel camera-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Hình Ảnh Hiện Trường</h2>
+              <p id="imageSub">Ảnh gửi từ camera ESP32-CAM</p>
+            </div>
+            <span class="badge neutral" id="imageType">Chưa có ảnh</span>
+          </div>
+
+          <div id="heroImage" class="hero-image"></div>
+
+          <div class="image-caption">
+            <span id="imageTime">Chưa có thời gian chụp</span>
+            <button id="imageDetail" class="text-button">Xem chi tiết phóng to ↗</button>
+          </div>
+
+          <div class="ai-strip">
+            <div class="ai-strip-info">
+              <strong id="aiTitle">Phân tích thị giác (SegFormer)</strong>
+              <p id="aiSummary">Chưa cài mô hình nhận diện.</p>
+            </div>
+            <span class="badge neutral" id="aiStatus">Chưa cấu hình</span>
+            <button id="speakAiBtn" class="button small secondary" title="Nghe đọc kết quả thị giác">🔊 Nghe đọc</button>
+          </div>
+        </article>
+
+        <!-- Cột Phải: Định vị & Thao tác nhanh -->
         <div class="right-stack">
-          <article class="panel location-panel"><div class="panel-head"><h2>Vị trí điện thoại</h2><span class="badge neutral" id="locationBadge">Chưa có GPS</span></div><div class="map-art" aria-hidden="true"><div class="map-road r1"></div><div class="map-road r2"></div><div class="map-road r3"></div><span class="map-pin">⌖</span><span class="map-label">VỊ TRÍ TỪ ĐIỆN THOẠI</span></div><div class="location-copy"><strong id="locationText">Đang chờ chia sẻ vị trí</strong><p id="locationInfo">Độ chính xác và tuổi dữ liệu sẽ hiện tại đây.</p><a id="mapLink" class="text-button" target="_blank" rel="noopener noreferrer" hidden>Mở trên bản đồ ↗</a></div></article>
-          <article class="panel action-panel"><h2>Kết nối người thân</h2><p>Gửi lệnh tìm gậy, chụp ảnh ngay hoặc bật thông báo khi đang mở trang.</p><button id="findCane" class="button full">⌁ &nbsp; Phát còi tìm gậy</button><button id="stopAlarm" class="button secondary full">⏹ &nbsp; Tắt còi ngay</button><button id="captureNow" class="button secondary full">◉ &nbsp; Chụp ảnh ngay</button><button id="notifyBtn" class="button secondary full">Bật thông báo trên máy này</button><small>Thông báo đẩy cần mở web bằng HTTPS. Không thay thế cuộc gọi khẩn cấp.</small></article>
+          <article class="panel location-panel">
+            <div class="panel-head">
+              <h2>Tọa Độ Định Vị</h2>
+              <span class="badge neutral" id="locationBadge">Chưa có GPS</span>
+            </div>
+            <div class="map-card-body">
+              <div class="location-coords">
+                <span class="coords-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </span>
+                <div>
+                  <strong id="locationText">Đang chờ chia sẻ vị trí</strong>
+                  <p id="locationInfo">Độ chính xác và tuổi dữ liệu sẽ hiện tại đây.</p>
+                </div>
+              </div>
+              <a id="mapLink" class="button small full" target="_blank" rel="noopener noreferrer" hidden>Mở trên Google Maps ↗</a>
+            </div>
+          </article>
+
+          <article class="panel action-panel">
+            <div class="panel-head">
+              <h2>Thao Tác Điều Khiển</h2>
+            </div>
+            <div class="action-body">
+              <p class="action-intro">Gửi lệnh khẩn cấp hoặc yêu cầu cập nhật hình ảnh tới thiết bị:</p>
+              <button id="findCane" class="button full">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                Phát còi tìm gậy
+              </button>
+              <button id="stopAlarm" class="button secondary full">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
+                Tắt còi báo động ngay
+              </button>
+              <button id="captureNow" class="button secondary full">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                Chụp ảnh hiện trường ngay
+              </button>
+              <button id="notifyBtn" class="button secondary full">Bật thông báo đẩy trên máy này</button>
+            </div>
+          </article>
         </div>
       </div>
-      <article class="panel feed-panel"><div class="panel-head"><div><h2>Những cập nhật gần đây</h2><p>Thời gian hiển thị theo múi giờ của trình duyệt.</p></div><button class="text-button" data-goto="history">Xem nhật ký →</button></div><div id="recentFeed" class="feed"></div></article>
-      <div class="bottom-note">ⓘ Bản mẫu phục vụ học tập. Cảm biến và AI có thể bỏ sót vật cản, mặt nước hoặc chênh cao.</div>
+
+      <!-- Feed Cập Nhật -->
+      <article class="panel feed-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Nhật Ký Sự Kiện Gần Đây</h2>
+            <p>Thời gian ghi nhận theo đồng hồ thiết bị và máy chủ.</p>
+          </div>
+          <button class="text-button" data-goto="history">Xem tất cả lịch sử →</button>
+        </div>
+        <div id="recentFeed" class="feed"></div>
+      </article>
     </section>
-    <section id="messages" class="page"><div class="heading"><div><div class="eyebrow">TIN TỪ THIẾT BỊ</div><h1>Tin nhắn cho người nhà</h1><p>SOS, ảnh SOS và cảnh báo rơi gậy. Tin được đẩy tới điện thoại/máy tính đã bật thông báo.</p></div><div class="button-row"><button id="readAll" class="button secondary">Đánh dấu đã đọc</button><button id="muteAlarm" class="button danger" hidden>Tắt âm báo SOS</button></div></div><div class="msg-grid"><article class="panel"><div id="messageList" class="feed"></div></article><article class="panel padded"><h2>Nhận tin như ứng dụng</h2><p id="pushStatus">Chưa bật thông báo trên máy này.</p><button id="pushBtn" class="button full">Bật thông báo trên máy này</button><button id="pushOff" class="button secondary full" hidden>Tắt thông báo trên máy này</button><button id="installBtn" class="button secondary full" hidden>Cài Đồng Hành như ứng dụng</button><ol class="fineprint"><li>Mở web bằng địa chỉ <b>HTTPS</b> của máy chủ (cloudflared), kết nối bằng khóa người nhà và chọn “Ghi nhớ trên thiết bị này”.</li><li>Android/Chrome: bấm “Bật thông báo”, sau đó có thể “Cài như ứng dụng”.</li><li>iPhone (iOS 16.4+): Chia sẻ → Thêm vào MH chính, mở app từ màn hình chính rồi mới bật thông báo.</li><li>Khi trang đang mở, SOS chưa xem phát âm báo lặp lại cho đến khi bấm “Tắt âm báo” hoặc xác nhận đã xem.</li></ol></article></div></section>
-    <section id="history" class="page"><div class="heading"><div><div class="eyebrow">LƯU LẠI NHỮNG CẬP NHẬT</div><h1>Nhật ký hình ảnh</h1><p>Ảnh định kỳ, SOS và sự kiện từ thiết bị.</p></div><button id="refresh" class="button">Làm mới</button></div><div class="filterbar"><div class="chips" id="filters"><button class="chip active" data-filter="all">Tất cả</button><button class="chip" data-filter="sos">SOS</button><button class="chip" data-filter="periodic">Định kỳ</button><button class="chip" data-filter="drop">Rơi gậy</button><button class="chip" data-filter="manual">Theo yêu cầu</button></div><input id="search" type="search" placeholder="Tìm theo nguồn hoặc ghi chú…" aria-label="Tìm sự kiện"></div><div id="historyGrid" class="history-grid"></div></section>
-    <section id="phone" class="page"><div class="heading"><div><div class="eyebrow">MANG THEO KẾT NỐI</div><h1>Điện thoại đồng hành</h1><p>Dùng khóa điện thoại để chia sẻ vị trí và thử camera với một ESP32.</p></div></div><div class="phone-grid"><article class="panel padded"><h2>Camera điện thoại</h2><p>Chỉ dùng làm nguồn ảnh ở chế độ thử. Cần HTTPS hoặc localhost; giữ trang ở phía trước.</p><video id="phoneVideo" autoplay muted playsinline></video><div class="button-row"><button id="startCamera" class="button">Bật camera</button><button id="stopCamera" class="button secondary">Tắt camera</button></div><p id="cameraStatus" role="status">Camera đang tắt.</p></article><article class="panel padded"><h2>Vị trí & trợ giúp</h2><p>Cho phép vị trí để gửi tọa độ và độ chính xác về gia đình. Trình duyệt không bảo đảm chạy khi khóa màn hình.</p><div class="button-row"><button id="startGps" class="button">Chia sẻ vị trí</button><button id="stopGps" class="button secondary">Dừng</button></div><p id="gpsStatus" role="status">Chưa bật GPS.</p><hr><button id="phoneSpeakTest" class="button secondary full" style="margin-bottom:8px">🔊 Thử giọng đọc cảnh báo</button><button id="phoneSos" class="button danger full">GỬI SOS TỪ ĐIỆN THOẠI</button><p>SOS vẫn yêu cầu chụp ảnh khi công tắc ảnh định kỳ đang tắt. Bật camera trước nếu dùng chế độ thử.</p><button id="phoneFind" class="button secondary full">Phát còi tìm gậy</button></article></div></section>
-    <section id="settings" class="page"><div class="heading"><div><div class="eyebrow">THIẾT LẬP CỦA GIA ĐÌNH</div><h1>Kết nối & quyền riêng tư</h1><p>Dữ liệu thật được lưu tại máy chủ của nhóm.</p></div></div><div class="settings-grid"><article class="panel padded"><h2>Kết nối máy chủ</h2><p id="connectionInfo">Đang xem dữ liệu minh họa.</p><button id="openConnection" class="button">Nhập địa chỉ & khóa</button><button id="disconnect" class="button secondary">Ngắt kết nối</button><p class="fineprint">Khóa được giữ trong phiên của tab này. Không đưa khóa thiết bị hoặc người thân vào ảnh chụp báo cáo.</p></article><article class="panel padded"><h2>Ảnh định kỳ</h2><label class="switch-row"><span>Cho phép gửi theo lịch</span><input id="periodicToggle" type="checkbox"></label><label for="interval">Khoảng cách giữa hai ảnh</label><select id="interval"><option value="15">15 giây · thử nghiệm</option><option value="30">30 giây</option><option value="60">1 phút</option><option value="300">5 phút</option><option value="900">15 phút</option></select><button id="saveSettings" class="button">Lưu cài đặt</button><p>Cần cả công tắc này và công tắc trên thiết bị cùng bật. Người thân không thể bật lại quyền bị người đeo tắt.</p></article><article class="panel padded"><h2>Mô hình AI</h2><span class="badge neutral" id="aiInfo">Chưa kết nối</span><p>SegFormer-B0 chạy ngay trên máy chủ: AI_PROVIDER=segformer, AI_MODEL_DIR=ai/model-baseline. Kết quả xuất hiện dưới từng ảnh.</p><p>Không có mô hình → “Chưa cấu hình”. Kết quả không xác định → “Chưa đủ căn cứ”.</p></article><article class="panel padded"><h2>Giọng đọc ViFast AI (ViFastTts)</h2><span class="badge good" id="ttsStatus">ViFastTts Services · Ngọc Huyền N0 (24kHz)</span><p>Tổng hợp giọng nói tiếng Việt tự nhiên cho người khiếm thị và người thân khi có sự kiện AI, SOS hoặc vật cản gần.</p><div class="button-row"><button id="testViFastBtn" class="button small">🔊 Nghe thử giọng đọc ViFast</button></div></article><article class="panel padded"><h2>Thiết bị đang kết nối</h2><div id="deviceList"></div></article></div></section>
-    <section id="guide" class="page"><div class="heading"><div><div class="eyebrow">BẮT ĐẦU TỪ MỘT BO MẠCH</div><h1>Hai bước để hoàn thiện</h1></div></div><div class="settings-grid"><article class="panel padded"><span class="step">01</span><h2>Một ESP32 + ESP32-CAM trên breadboard</h2><p>PROJECT_MODE=duo: nạp test_one.ino vào ESP32 (HC-SR04 qua chia áp, nút, còi, LED thay rung) và camera.ino vào ESP32-CAM. Máy chủ ghép ảnh ESP32-CAM với đúng SOS; điện thoại chỉ chia sẻ GPS. Xem docs/12.</p><p>Chưa có motor: LED thay lực rung. Nút rơi gậy chỉ giả lập. Có thể dùng biến trở khi chưa nối cảm biến.</p></article><article class="panel padded"><span class="step">02</span><h2>ESP32-CAM + ESP32 ở gậy</h2><p>Nạp chest_cam.ino vào ESP32-CAM AI Thinker và cane.ino vào bo development. Camera ở ngực; MPU6050 tại gậy là linh kiện cần bổ sung để thử phát hiện rơi.</p><p>SOS từ gậy yêu cầu camera ngực chụp qua máy chủ. Còi và rung cục bộ vẫn chạy khi mất mạng.</p></article><article class="panel padded wide"><h2>Trước buổi demo</h2><ol><li>Đọc README và tài liệu đấu dây trong gói mã nguồn.</li><li>Chạy máy chủ, nhập khóa người thân ở trang này; nhập khóa điện thoại ở tab điện thoại.</li><li>Đưa vật cản lại gần, thử SOS, tắt ảnh định kỳ, thử mất Wi-Fi và tìm gậy.</li><li>Xác nhận nhãn mô phỏng, thời gian ảnh, tuổi GPS và trạng thái chưa có AI đều hiển thị đúng.</li></ol><p class="fineprint">Tin nhắn hiển thị trong trang Tin nhắn; thông báo đẩy tới điện thoại kể cả khi đóng trình duyệt nếu web mở bằng HTTPS và đã bật thông báo.</p></article></div></section>
-  </main><footer>ĐỒNG HÀNH <span>Thiết kế cho kết nối. Thử nghiệm có người hỗ trợ.</span><span>IoT / 2026</span></footer>
+
+    <!-- PAGE: MESSAGES -->
+    <section id="messages" class="page">
+      <div class="heading">
+        <div>
+          <h1>Hộp Thông Báo & Khẩn Cấp</h1>
+          <p>Lịch sử cảnh báo SOS, rơi gậy và bản tin đẩy thời gian thực.</p>
+        </div>
+        <div class="button-row">
+          <button id="readAll" class="button secondary">Đánh dấu tất cả đã đọc</button>
+          <button id="muteAlarm" class="button danger" hidden>Tắt âm chuông SOS</button>
+        </div>
+      </div>
+
+      <div class="msg-grid">
+        <article class="panel">
+          <div id="messageList" class="feed"></div>
+        </article>
+
+        <article class="panel padded">
+          <h2>Cấu Hình Thông Báo Đẩy (Web Push)</h2>
+          <p id="pushStatus">Chưa bật thông báo trên máy này.</p>
+          <button id="pushBtn" class="button full">Kích hoạt thông báo đẩy</button>
+          <button id="pushOff" class="button secondary full" hidden>Tắt thông báo đẩy</button>
+          <button id="installBtn" class="button secondary full" hidden>Cài đặt Đồng Hành như ứng dụng</button>
+          <div class="guide-box">
+            <strong>Hướng dẫn nhận tin khẩn cấp:</strong>
+            <ol class="fineprint">
+              <li>Mở giao diện qua liên kết <b>HTTPS</b> an toàn để kích hoạt Service Worker.</li>
+              <li>Nhấp <b>"Kích hoạt thông báo đẩy"</b> và chọn Cho phép (Allow) trong hộp thoại trình duyệt.</li>
+              <li>Trên điện thoại Android/iOS: Chọn "Thêm vào màn hình chính" (Add to Home Screen) để chạy toàn màn hình độc lập.</li>
+            </ol>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PAGE: HISTORY -->
+    <section id="history" class="page">
+      <div class="heading">
+        <div>
+          <h1>Kho Lưu Trữ Hình Ảnh & Sự Kiện</h1>
+          <p>Toàn bộ ảnh chụp định kỳ, ảnh kích hoạt SOS và kết quả phân tích thị giác.</p>
+        </div>
+        <button id="refresh" class="button">Làm mới dữ liệu</button>
+      </div>
+
+      <div class="filterbar">
+        <div class="chips" id="filters">
+          <button class="chip active" data-filter="all">Tất cả</button>
+          <button class="chip" data-filter="sos">Sự kiện SOS</button>
+          <button class="chip" data-filter="periodic">Ảnh định kỳ</button>
+          <button class="chip" data-filter="drop">Cảnh báo rơi gậy</button>
+          <button class="chip" data-filter="manual">Người nhà yêu cầu</button>
+        </div>
+        <input id="search" type="search" placeholder="Tìm theo nguồn hoặc nội dung…" aria-label="Tìm sự kiện">
+      </div>
+
+      <div id="historyGrid" class="history-grid"></div>
+    </section>
+
+    <!-- PAGE: PHONE -->
+    <section id="phone" class="page">
+      <div class="heading">
+        <div>
+          <h1>Điện Thoại Đồng Hành</h1>
+          <p>Sử dụng điện thoại người mang làm mắt camera dự phòng và bộ phát định vị GPS.</p>
+        </div>
+      </div>
+
+      <div class="phone-grid">
+        <article class="panel padded">
+          <h2>Camera Phụ Trợ</h2>
+          <p>Sử dụng camera điện thoại làm nguồn ảnh khi không có phần cứng ESP32-CAM.</p>
+          <video id="phoneVideo" autoplay muted playsinline></video>
+          <div class="button-row">
+            <button id="startCamera" class="button">Bật camera điện thoại</button>
+            <button id="stopCamera" class="button secondary">Tắt camera</button>
+          </div>
+          <p id="cameraStatus" role="status" class="status-note">Camera đang tắt.</p>
+        </article>
+
+        <article class="panel padded">
+          <h2>Định Vị Tọa Độ GPS</h2>
+          <p>Thu thập tọa độ vệ tinh độ chính xác cao từ thiết bị di động gửi về máy chủ gia đình.</p>
+          <div class="button-row">
+            <button id="startGps" class="button">Bắt đầu chia sẻ GPS</button>
+            <button id="stopGps" class="button secondary">Dừng chia sẻ</button>
+          </div>
+          <p id="gpsStatus" role="status" class="status-note">Chưa bật GPS.</p>
+          <hr>
+          <div class="phone-actions">
+            <button id="phoneSpeakTest" class="button secondary full">🔊 Thử nghiệm giọng đọc cảnh báo</button>
+            <button id="phoneSos" class="button danger full">PHÁT TÍN HIỆU SOS KHẨN CẤP</button>
+            <button id="phoneFind" class="button secondary full">Phát còi tìm gậy</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PAGE: SETTINGS -->
+    <section id="settings" class="page">
+      <div class="heading">
+        <div>
+          <h1>Cấu Hình Hệ Thống & Quyền Riêng Tư</h1>
+          <p>Thiết lập thông số máy chủ, chu kỳ chụp ảnh và kết nối thiết bị ngoại vi.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <article class="panel padded">
+          <h2>Phiên Kết Nối Máy Chủ</h2>
+          <p id="connectionInfo">Đang xem dữ liệu minh họa.</p>
+          <div class="button-row">
+            <button id="openConnection" class="button">Thay đổi địa chỉ & khóa</button>
+            <button id="disconnect" class="button secondary">Ngắt kết nối</button>
+          </div>
+        </article>
+
+        <article class="panel padded">
+          <h2>Cấu Hình Chụp Ảnh Định Kỳ</h2>
+          <label class="switch-row">
+            <span>Cho phép chụp ảnh theo chu kỳ</span>
+            <input id="periodicToggle" type="checkbox">
+          </label>
+          <label for="interval">Khoảng cách giữa hai lần chụp</label>
+          <select id="interval">
+            <option value="15">15 giây (chế độ kiểm thử)</option>
+            <option value="30">30 giây</option>
+            <option value="60">1 phút</option>
+            <option value="300">5 phút</option>
+            <option value="900">15 phút</option>
+          </select>
+          <button id="saveSettings" class="button">Lưu cấu hình</button>
+        </article>
+
+        <article class="panel padded">
+          <h2>Mô Hình Thị Giác Máy Tính</h2>
+          <div class="ai-config-status">
+            <span class="badge neutral" id="aiInfo">Chưa kết nối</span>
+          </div>
+          <p>Mô hình SegFormer-B0 phân tích các vùng nguy cơ (lòng đường xe chạy, bề mặt nước ngập) trong khu vực di chuyển phía trước.</p>
+        </article>
+
+        <article class="panel padded">
+          <h2>Bộ Đọc Giọng Nói Tiếng Việt</h2>
+          <div class="ai-config-status">
+            <span class="badge good" id="ttsStatus">Giọng đọc tiếng Việt sẵn sàng</span>
+          </div>
+          <p>Hỗ trợ phát âm thanh hướng dẫn và cảnh báo khẩn cấp bằng giọng đọc tự nhiên.</p>
+          <button id="testViFastBtn" class="button small secondary">🔊 Thử nghiệm âm thanh</button>
+        </article>
+
+        <article class="panel padded wide">
+          <h2>Thiết Bị Đang Kết Nối Mạng</h2>
+          <div id="deviceList"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PAGE: GUIDE -->
+    <section id="guide" class="page">
+      <div class="heading">
+        <div>
+          <h1>Tài Liệu Hướng Dẫn Kỹ Thuật</h1>
+          <p>Tóm tắt các bước lắp ráp phần cứng và vận hành hệ thống Đồng Hành.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <article class="panel padded">
+          <span class="step-num">01</span>
+          <h2>Khối Thiết Bị Đeo Ngực (ESP32 + ESP32-CAM)</h2>
+          <p>Bo ESP32 kết nối cảm biến siêu âm HC-SR04 qua cầu phân áp an toàn, điều khiển còi báo động trực tiếp (GPIO 13) và mô-tơ rung xúc giác (GPIO 25). ESP32-CAM thực hiện nhiệm vụ ghi nhận hình ảnh độc lập.</p>
+        </article>
+
+        <article class="panel padded">
+          <span class="step-num">02</span>
+          <h2>Khối Gậy Hỗ Trợ (ESP32-C3 Super Mini)</h2>
+          <p>ESP32-C3 tích hợp còi công suất (GPIO 5), màn hình OLED SSD1306 (GPIO 6/7) và nút bấm thân gậy (GPIO 10). Giao tiếp ngoại tuyến trực tiếp với khối ngực qua giao thức vô tuyến <b>ESP-NOW (&lt; 15 ms)</b>.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>HỆ THỐNG ĐỒNG HÀNH — BẢO VỆ & KẾT NỐI NGƯỜI KHIẾM THỊ</span>
+    <span class="footer-meta">Đồ án kỹ thuật IoT · PTIT 2026</span>
+  </footer>
 </div>
-<dialog id="connectDialog"><form id="connectForm"><div class="modal-top"><h2>Kết nối Đồng Hành</h2><button type="button" class="icon-button" id="closeConnect" aria-label="Đóng">×</button></div><p>Nhập API của nhóm. Nếu mở web từ máy chủ, để trống địa chỉ.</p><label for="apiUrl">Địa chỉ máy chủ</label><input id="apiUrl" type="url" placeholder="https://ten-may-chu.example"><label for="token">Khóa truy cập</label><div class="button-row" style="margin-bottom:8px"><button type="button" id="quickCaregiver" class="button small secondary">🔑 Khóa Người Nhà</button><button type="button" id="quickPhone" class="button small secondary">📱 Khóa Điện Thoại</button></div><input id="token" type="password" required minlength="24" autocomplete="off" placeholder="Khóa caregiver hoặc phone từ .env"><label class="switch-row"><span>Ghi nhớ trên thiết bị này (để mở từ thông báo/app)</span><input id="remember" type="checkbox"></label><p id="loginError" class="error" role="alert"></p><button class="button full" type="submit">Kết nối</button><button id="useDemo" type="button" class="button secondary full">Xem bản minh họa</button></form></dialog>
-<dialog id="eventDialog"><div class="modal-top"><h2>Chi tiết cập nhật</h2><button class="icon-button" id="closeEvent" aria-label="Đóng">×</button></div><div id="eventContent"></div></dialog>
+
+<!-- MODAL DIALOGS -->
+<dialog id="connectDialog">
+  <form id="connectForm">
+    <div class="modal-top">
+      <h2>Thiết Lập Kết Nối Máy Chủ</h2>
+      <button type="button" class="icon-button" id="closeConnect" aria-label="Đóng">✕</button>
+    </div>
+    <p class="modal-desc">Nhập địa chỉ máy chủ và mã khóa truy cập bảo mật được cấp phát:</p>
+
+    <label for="apiUrl">Địa chỉ máy chủ (để trống nếu mở cùng máy):</label>
+    <input id="apiUrl" type="url" placeholder="https://iot.chongziapp.id.vn">
+
+    <label for="token">Khóa xác thực (Token):</label>
+    <div class="quick-token-row">
+      <button type="button" id="quickCaregiver" class="button small secondary">Khóa Người Nhà</button>
+      <button type="button" id="quickPhone" class="button small secondary">Khóa Điện Thoại</button>
+    </div>
+    <input id="token" type="password" required minlength="24" autocomplete="off" placeholder="Nhập khóa định danh...">
+
+    <label class="switch-row">
+      <span>Ghi nhớ phiên đăng nhập trên thiết bị này</span>
+      <input id="remember" type="checkbox">
+    </label>
+
+    <p id="loginError" class="error" role="alert"></p>
+
+    <div class="modal-actions">
+      <button class="button full" type="submit">Xác nhận kết nối</button>
+      <button id="useDemo" type="button" class="button secondary full">Xem chế độ minh họa</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="eventDialog">
+  <div class="modal-top">
+    <h2>Chi Tiết Sự Kiện Khẩn Cấp</h2>
+    <button type="button" class="icon-button" id="closeEvent" aria-label="Đóng">✕</button>
+  </div>
+  <div id="eventContent"></div>
+</dialog>
+
 <div id="toast" class="toast" role="status" hidden></div>
-</body></html>
+</body>
+</html>

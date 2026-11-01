@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 530" width="100%" height="100%" style="background:#ffffff; font-family:'Segoe UI', Arial, sans-serif;">
+  <defs>
+    <marker id="arrow-black" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#000000" />
+    </marker>
+  </defs>
+
+  <!-- ==================== KHỐI TRÁI: VÒNG CHÍNH LOOP() ==================== -->
+  <g transform="translate(25, 40)">
+    <!-- Khung lớn nét đứt -->
+    <rect width="410" height="460" rx="6" fill="#ffffff" stroke="#000000" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <rect x="25" y="-12" width="280" height="24" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="165" y="5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#000000">Vòng chính loop() — không chờ mạng</text>
+
+    <!-- Box 1: distanceTick -->
+    <g transform="translate(20, 25)">
+      <rect width="175" height="60" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="87" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">distanceTick: HC-SR04</text>
+      <text x="87" y="38" text-anchor="middle" font-size="10" fill="#000000">ngắt ECHO · lọc trung vị 3</text>
+      <text x="87" y="52" text-anchor="middle" font-size="9.5" fill="#444444">chu kỳ đo 80 ms</text>
+    </g>
+
+    <!-- Box 2: Đọc 4 nút chức năng -->
+    <g transform="translate(215, 25)">
+      <rect width="175" height="60" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="87" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Đọc 4 nút chức năng</text>
+      <text x="87" y="38" text-anchor="middle" font-size="9.5" fill="#000000">chống dội 40 ms</text>
+      <text x="87" y="52" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#000000">SOS giữ 1,5 s · FIND · STOP</text>
+    </g>
+
+    <!-- Box 3: Quyết định cảnh báo -->
+    <g transform="translate(20, 140)">
+      <rect width="210" height="85" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="105" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Tính toán &amp; Ưu tiên cảnh báo</text>
+      <line x1="15" y1="28" x2="195" y2="28" stroke="#cccccc" stroke-width="1"/>
+      <text x="12" y="45" font-size="9.5" font-weight="bold" fill="#000000">1. Vật cản gần (≤ 40 cm nguy hiểm)</text>
+      <text x="12" y="60" font-size="9.5" fill="#000000">2. SOS &gt; Phản hồi nút &gt; Mất đo</text>
+      <text x="12" y="74" font-size="9" fill="#555555">(Độ trễ phản hồi tức thời &lt; 10 ms)</text>
+    </g>
+
+    <!-- Box 4: ESP-NOW broadcast -->
+    <g transform="translate(250, 140)">
+      <rect width="140" height="85" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+      <text x="70" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">ESP-NOW broadcast</text>
+      <line x1="15" y1="32" x2="125" y2="32" stroke="#cccccc" stroke-width="1"/>
+      <text x="70" y="50" text-anchor="middle" font-size="10" font-weight="bold" fill="#000000">SOS / FIND / STOP</text>
+      <text x="70" y="68" text-anchor="middle" font-size="9.5" fill="#444444">(Gửi trực tiếp gậy C3)</text>
+    </g>
+
+    <!-- Box 5: Đầu ra chấp hành -->
+    <g transform="translate(20, 275)">
+      <rect width="370" height="85" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+      <text x="185" y="22" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#000000">Đầu ra cảnh báo tại chỗ</text>
+      <line x1="20" y1="30" x2="350" y2="30" stroke="#cccccc" stroke-width="1"/>
+      <text x="20" y="48" font-size="10" fill="#000000">• <tspan font-weight="bold">Mô-tơ rung xúc giác (PWM GPIO 25):</tspan> Rung tăng dần theo độ gần</text>
+      <text x="20" y="68" font-size="10" fill="#000000">• <tspan font-weight="bold">Còi báo (SINGLE_BUZZER D13):</tspan> Nối trực tiếp, không dùng transistor</text>
+    </g>
+
+    <!-- Nội bộ vòng lặp -->
+    <path d="M 107 85 L 107 140" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow-black)"/>
+    <path d="M 302 85 L 302 140" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow-black)"/>
+    <path d="M 107 225 L 107 275" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow-black)"/>
+  </g>
+
+  <!-- ==================== KHỐI PHẢI: TÁC VỤ MẠNG FREERTOS ==================== -->
+  <g transform="translate(485, 40)">
+    <!-- Khung lớn nét đứt -->
+    <rect width="410" height="460" rx="6" fill="#ffffff" stroke="#000000" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <rect x="25" y="-12" width="310" height="24" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="180" y="5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#000000">Tác vụ mạng networkTask (FreeRTOS, core 0)</text>
+
+    <!-- Box 1: Wi-Fi reconnect & NTP -->
+    <g transform="translate(20, 25)">
+      <rect width="175" height="60" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="87" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Wi-Fi &amp; NTP</text>
+      <text x="87" y="42" text-anchor="middle" font-size="9.5" fill="#000000">Tự kết nối lại 5 s</text>
+      <text x="87" y="54" text-anchor="middle" font-size="9" fill="#555555">pool.ntp.org, time.google</text>
+    </g>
+
+    <!-- Box 2: Hàng đợi sự kiện -->
+    <g transform="translate(215, 25)">
+      <rect width="175" height="60" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="87" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Hàng đợi sự kiện (16)</text>
+      <text x="87" y="38" text-anchor="middle" font-size="9.5" fill="#000000">Lưu NVS · SOS ưu tiên</text>
+      <text x="87" y="52" text-anchor="middle" font-size="9" fill="#555555">Chống trùng lặp theo ID</text>
+    </g>
+
+    <!-- Box 3: HTTP Endpoints -->
+    <g transform="translate(20, 140)">
+      <rect width="370" height="85" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+      <text x="185" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Giao tiếp HTTP/REST Client</text>
+      <line x1="20" y1="28" x2="350" y2="28" stroke="#cccccc" stroke-width="1"/>
+      <text x="20" y="46" font-size="10" fill="#000000">• <tspan font-weight="bold">POST /events · POST /state (3 s):</tspan> Gửi khoảng cách &amp; sự kiện</text>
+      <text x="20" y="63" font-size="10" fill="#000000">• <tspan font-weight="bold">GET /commands (2 s):</tspan> Polling lệnh điều khiển (TTL / ACK lease 12 s)</text>
+      <text x="20" y="78" font-size="10" fill="#000000">• <tspan font-weight="bold">POST /find-cane · POST /stop-alarm:</tspan> Đồng bộ lệnh còi qua mạng</text>
+    </g>
+
+    <!-- Box 4: Camera ngực (ESP32-CAM) -->
+    <g transform="translate(20, 275)">
+      <rect width="370" height="85" rx="4" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+      <text x="185" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="#000000">Khối Camera ngực (ESP32-CAM AI Thinker)</text>
+      <line x1="20" y1="30" x2="350" y2="30" stroke="#cccccc" stroke-width="1"/>
+      <text x="20" y="50" font-size="10" fill="#000000">• Polling nhận lệnh chụp từ máy chủ khi có SOS hoặc theo lịch định kỳ</text>
+      <text x="20" y="68" font-size="10" fill="#000000">• Chụp frame JPEG mới và POST lên /events/{id}/image</text>
+    </g>
+
+    <!-- Nội bộ mạng -->
+    <path d="M 302 85 L 302 140" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow-black)"/>
+    <path d="M 205 225 L 205 275" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arrow-black)"/>
+  </g>
+
+  <!-- ==================== GIAO TIẾP HÀNG ĐỢI ==================== -->
+  <!-- eventQueue (Nút -> Hàng đợi mạng) -->
+  <path d="M 405 110 C 455 110, 640 55, 700 85" fill="none" stroke="#000000" stroke-width="1.4" marker-end="url(#arrow-black)"/>
+  <rect x="470" y="85" width="120" height="22" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+  <text x="530" y="100" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#000000">eventQueue</text>
+
+  <!-- commandQueue (Mạng -> Quyết định cảnh báo) -->
+  <path d="M 505 180 C 455 190, 280 195, 230 180" fill="none" stroke="#000000" stroke-width="1.4" marker-end="url(#arrow-black)"/>
+  <rect x="345" y="170" width="120" height="22" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+  <text x="405" y="185" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#000000">commandQueue</text>
+
+</svg>

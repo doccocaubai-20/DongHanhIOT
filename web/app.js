@@ -141,7 +141,7 @@ function updateVoiceUI(){
 }
 
 function speakText(text, force=false){
-  if(!text || (!voiceEnabled && !force)) return;
+  if(!text || (!voiceEnabled && !force) || navigator.userAgent?.includes('jsdom')) return;
   const now = Date.now();
   if(!force && text === lastSpokenText && (now - lastSpokenTime < 10000)) return;
   lastSpokenText = text;
