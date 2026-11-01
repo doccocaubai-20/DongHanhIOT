@@ -404,17 +404,8 @@ p {
 }
 
 /* ==================== BANNERS & BADGES ==================== */
-.mode-banner {
-  padding: 10px 32px;
-  background: #fffbeb;
-  border-bottom: 1px solid #fef3c7;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #92400e;
+.mode-banner, #modeBanner, #syncBadge {
+  display: none !important;
 }
 
 .mode-banner span {
